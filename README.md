@@ -2,6 +2,8 @@
 
 # Grammar of Graphics for base plot
 
+## Aesthetic mapping
+
 `amp()` for **a**esthetic **m**a**p**ping, that equivalents to
 `ggplot2::aes()`.
 
@@ -16,4 +18,36 @@ par(mfrow=c(2,2))
 p; p1; p2; p3
 ```
 
+    ## Warning in par(new = TRUE): calling par(new=TRUE) with no plot
+
 ![](README_files/figure-gfm/fig1-1.png)<!-- -->
+
+## Setting labels
+
+``` r
+p2 %>% bblabs(title = "hello", sub = "just for demo",
+              xlab="this is xlab", ylab = "this is ylab")
+```
+
+    ## Warning in par(new = TRUE): calling par(new=TRUE) with no plot
+
+![](README_files/figure-gfm/labs-1.png)<!-- -->
+
+## Theme
+
+``` r
+g <- p2 %>%
+     bbtheme(col.main="red", cex.main=2,
+             mar = c(4, 4, 3, 1)) %>%
+     bbtitle("applying graphics::par")
+par(mfrow=c(1,2))
+print(g)
+```
+
+    ## Warning in par(new = TRUE): calling par(new=TRUE) with no plot
+
+``` r
+p2 %>% bbtitle("theme has no side effect")
+```
+
+![](README_files/figure-gfm/theme-1.png)<!-- -->

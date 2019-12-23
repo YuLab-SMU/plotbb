@@ -15,18 +15,24 @@ bbplot <- function(data, mapping = amp()) {
     p <- function() {
         plot(data[[xx]], data[[yy]],
              type = 'n',
-             xlab = xx,
-             ylab = yy)
+             xlab = "", 
+             ylab = "")
 
     }
-
-    structure(list(
+    
+    res <- structure(list(
         plot = p,
         data = data,
         mapping = mapping,
-        layer = list()
+        layer = list(),
+        theme = list(),
+        labs = list(title = NULL,
+                    sub = NULL,
+                    xlab = NULL,
+                    ylab = NULL)
     ), class = "bbplot")
-    
+
+    bbylab(bbxlab(res, xx), yy) 
 }
 
 ##' aesthetic mapping
@@ -48,9 +54,20 @@ amp <- function(x, y, ...) {
 ##' @method print bbplot
 ##' @export
 print.bbplot <- function(x, ...) {
+    if (length(x$theme)) {
+        old.par <- par(no.readonly=TRUE) #, new = TRUE)
+        on.exit(suppressWarnings(par(old.par, no.readonly = TRUE)))
+        par(x$theme, no.readonly = TRUE)
+    }
+    par(new = TRUE)
     eval(x$plot())
     for(ly in x$layer) {
         eval(ly())
     }
+
+    for (lab in x$labs) {
+        if (!is.null(lab)) eval(lab())
+    }
+
 }
 
