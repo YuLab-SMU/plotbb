@@ -10,11 +10,11 @@ ly_lm <- function(p, mapping = NULL, data = NULL, ...) {
         grp <- parse_mapping(mapping, 'group', data)
         for (g in unique(grp)) {
             d <- data[grp == g, ]
-            ly <- .ly_lm(formula, d)
+            ly <- .ly_lm(formula, d, ...)
             p <- add_layer(p, ly)
         }
     } else {
-        ly <- .ly_lm(formula, data)
+        ly <- .ly_lm(formula, data, ...)
         p <- add_layer(p, ly)        
     }
 
@@ -23,7 +23,7 @@ ly_lm <- function(p, mapping = NULL, data = NULL, ...) {
 
 
 ##' @importFrom graphics segments
-.ly_lm <- function(formula, data) {
+.ly_lm <- function(formula, data, ...) {
     s <- stats::lm(formula, data = data)
     x <- as.character(formula)[3]
 
@@ -36,6 +36,6 @@ ly_lm <- function(p, mapping = NULL, data = NULL, ...) {
     lm_env$x1 <- x1
     lm_env$y0 <- y0
     lm_env$y1 <- y1
-    ly <- function() segments(x0, y0, x1, y1)
+    ly <- function() segments(x0, y0, x1, y1, ...)
     with_env(ly, lm_env)
 }
