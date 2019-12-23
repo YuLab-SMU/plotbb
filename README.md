@@ -18,8 +18,6 @@ par(mfrow=c(2,2))
 p; p1; p2; p3
 ```
 
-    ## Warning in par(new = TRUE): calling par(new=TRUE) with no plot
-
 ![](README_files/figure-gfm/fig1-1.png)<!-- -->
 
 ## Setting labels
@@ -28,8 +26,6 @@ p; p1; p2; p3
 p2 %>% bblabs(title = "hello", sub = "just for demo",
               xlab="this is xlab", ylab = "this is ylab")
 ```
-
-    ## Warning in par(new = TRUE): calling par(new=TRUE) with no plot
 
 ![](README_files/figure-gfm/labs-1.png)<!-- -->
 
@@ -42,11 +38,6 @@ g <- p2 %>%
      bbtitle("applying graphics::par")
 par(mfrow=c(1,2))
 print(g)
-```
-
-    ## Warning in par(new = TRUE): calling par(new=TRUE) with no plot
-
-``` r
 p2 %>% bbtitle("theme has no side effect")
 ```
 

@@ -59,7 +59,7 @@ print.bbplot <- function(x, ...) {
         on.exit(suppressWarnings(par(old.par, no.readonly = TRUE)))
         par(x$theme, no.readonly = TRUE)
     }
-    par(new = TRUE)
+    suppressWarnings(par(new = TRUE))
     eval(x$plot())
     for(ly in x$layer) {
         eval(ly())
