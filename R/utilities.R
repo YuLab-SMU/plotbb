@@ -46,7 +46,7 @@ bb_col <- function(mapping, data) {
         ucol <- unique(col_var)
         cols <- colorspace::rainbow_hcl(length(ucol))
         names(cols) <- ucol
-        col_vec <- cols[col_var]
+        col_vec <- cols[as.character(col_var)]
     }
     return(col_vec)
 }
