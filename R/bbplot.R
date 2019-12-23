@@ -59,7 +59,12 @@ print.bbplot <- function(x, ...) {
         on.exit(suppressWarnings(par(old.par, no.readonly = TRUE)))
         par(x$theme, no.readonly = TRUE)
     }
-    suppressWarnings(par(new = TRUE))
+    .bbplot <- get(".bbplot")
+    last_plot <- .bbplot$.last_plot
+
+    if (!is.null(last_plot) && length(last_plot$theme))
+        suppressWarnings(par(new = TRUE))
+
     eval(x$plot())
     for(ly in x$layer) {
         eval(ly())
@@ -69,5 +74,6 @@ print.bbplot <- function(x, ...) {
         if (!is.null(lab)) eval(lab())
     }
 
+    assign(".last_plot", x, envir = .bbplot)
 }
 
