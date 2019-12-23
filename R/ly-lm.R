@@ -6,28 +6,29 @@ ly_lm <- function(p, mapping = NULL, data = NULL, ...) {
 
     formula <- stats::as.formula(paste(yvar(mapping), '~', xvar(mapping)))
     params <- list(...)
-    if (!is.null(mapping$group)) {
-        grp <- parse_mapping(mapping, 'group', data)
-        ugrp <- unique(grp)
-        cols <- NULL
-        if (is.null(params$col) && !is.null(mapping$col)) {
-            cols <- unique(bb_col(mapping, data))
-        }
-        for (i in seq_along(ugrp)) {
-            d <- data[grp == ugrp[i], ]
-            if (!is.null(cols)) {
-                ly <- .ly_lm(formula, d, ..., col = cols[i])
-            } else {
-                ly <- .ly_lm(formula, d, ...)
-            }
-            
-            p <- add_layer(p, ly)
-        }
-    } else {
+    if (is.null(mapping$group)) {
         ly <- .ly_lm(formula, data, ...)
         p <- add_layer(p, ly)        
+        return(p)
     }
 
+    grp <- parse_mapping(mapping, 'group', data)
+    ugrp <- unique(grp)
+    cols <- NULL
+    if (is.null(params$col) && !is.null(mapping$col)) {
+        cols <- unique(bb_col(mapping, data))
+    }
+    for (i in seq_along(ugrp)) {
+        d <- data[grp == ugrp[i], ]
+        if (!is.null(cols)) {
+            ly <- .ly_lm(formula, d, ..., col = cols[i])
+        } else {
+            ly <- .ly_lm(formula, d, ...)
+        }
+        
+        p <- add_layer(p, ly)
+    }
+    
     return(p)
 }
 
