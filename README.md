@@ -16,4 +16,4 @@ par(mfrow=c(2,2))
 p; p1; p2; p3
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+![](README_files/figure-gfm/fig1-1.png)<!-- -->

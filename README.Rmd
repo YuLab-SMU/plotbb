@@ -12,7 +12,7 @@ html_preview: false
 `amp()` for **a**esthetic **m**a**p**ping, that equivalents to `ggplot2::aes()`.
 
 
-```{r}
+```{r fig1}
 library(bbplot)
 
 p <- bbplot(mtcars, amp(mpg, disp, col=factor(cyl)))
