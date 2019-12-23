@@ -5,11 +5,12 @@
 ##' @param data data
 ##' @param mapping variable mapping
 ##' @return bbplot object
+##' @importFrom graphics plot
 ##' @export
 ##' @author Guangchuang Yu
-bbplot <- function(data, mapping) {
-    xvar <- mapping[["x"]] %||% mapping[[1]]
-    yvar <- mapping[['y']] %||% mapping[[2]]
+bbplot <- function(data, mapping = amp()) {
+    xvar <- quo_name(mapping$x)
+    yvar <- quo_name(mapping$y)
 
     p <- function() {
         plot(data[[xvar]], data[[yvar]],
@@ -29,6 +30,22 @@ bbplot <- function(data, mapping) {
     
 }
 
+##' aesthetic mapping
+##'
+##'
+##' aesthetic mapping for bbplot
+##'
+##' @title amp
+##' @param x x variable
+##' @param y y variable
+##' @param ... other mappings
+##' @importFrom rlang enquos
+##' @export
+##' @author Guangchuang Yu
+amp <- function(x, y, ...) {
+    enquos(x = x, y = y, ..., .ignore_empty = "all")
+}
+
 ##' @method print bbplot
 ##' @export
 print.bbplot <- function(x, ...) {
@@ -37,45 +54,4 @@ print.bbplot <- function(x, ...) {
         eval(ly())
     }
 }
-
-##' layer
-##'
-##' bbplot layers
-##' @title layer
-##' @rdname layer
-##' @param p bbplot object
-##' @param ... addition parameter for the layer
-##' @return bbplot object
-##' @export
-##' @author Guangchuang Yu
-ly_point <- function(p, ...) {
-    x <- p$data[[p$xvar]]
-    y <- p$data[[p$yvar]]
-
-    ly <- function() points(x, y, ...)
-    add_layer(p, ly)
-}
-
-##' @rdname layer
-##' @export
-ly_lm <- function(p, ...) {
-    x <- p$data[[p$xvar]]
-    y <- p$data[[p$yvar]]
-
-    ly <- function() abline(lm(y ~ x, data = p$data), ...)
-    add_layer(p, ly)
-}
-
-
-add_layer <- function(p, ly) {
-    nlayer <- length(p$layer)
-    if (nlayer == 0) {
-        p$layer <- list(ly)
-    } else {
-        p$layer[[nlayer + 1]] <- ly
-    }
-    return(p)
-}
-
-
 

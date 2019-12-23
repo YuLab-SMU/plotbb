@@ -4,7 +4,7 @@
 \alias{bbplot}
 \title{bbplot}
 \usage{
-bbplot(data, mapping)
+bbplot(data, mapping = amp())
 }
 \arguments{
 \item{data}{data}

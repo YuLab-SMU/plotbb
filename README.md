@@ -1,14 +1,17 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# proof of concept for implementing grammar of graphics in base plot
+# Grammar of Graphics for base plot
+
+`amp()` for \_\_a\_\_esthetic \_\_m\_\_a\_\_p\_\_ping, that equivalent
+to `ggplot2::aes()`.
 
 ``` r
 library(bbplot)
 
-p = bbplot(mtcars, list(x='mpg', y='disp'))
+p <- bbplot(mtcars, amp(mpg, disp, col=factor(cyl)))
 p1 = p %>% ly_point
-p2 = p %>% ly_lm
-p3 = p %>% ly_point %>% ly_lm(col='blue')
+p2 = p %>% ly_lm(col='blue')
+p3 = p %>% ly_point %>% ly_lm(amp(group=cyl))
 par(mfrow=c(2,2))
 p; p1; p2; p3
 ```
