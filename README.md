@@ -2,8 +2,8 @@
 
 # Grammar of Graphics for base plot
 
-`amp()` for \_\_a\_\_esthetic \_\_m\_\_a\_\_p\_\_ping, that equivalent
-to `ggplot2::aes()`.
+`amp()` for **a**esthetic **m**a**p**ping, that equivalent to
+`ggplot2::aes()`.
 
 ``` r
 library(bbplot)
