@@ -2,7 +2,7 @@
 
 # Grammar of Graphics for base plot
 
-`amp()` for **a**esthetic **m**a**p**ping, that equivalent to
+`amp()` for **a**esthetic **m**a**p**ping, that equivalents to
 `ggplot2::aes()`.
 
 ``` r

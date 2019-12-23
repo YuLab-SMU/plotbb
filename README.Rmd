@@ -9,7 +9,7 @@ html_preview: false
 
 # Grammar of Graphics for base plot
 
-`amp()` for **a**esthetic **m**a**p**ping, that equivalent to `ggplot2::aes()`.
+`amp()` for **a**esthetic **m**a**p**ping, that equivalents to `ggplot2::aes()`.
 
 
 ```{r}
