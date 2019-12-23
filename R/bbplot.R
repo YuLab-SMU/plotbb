@@ -9,22 +9,21 @@
 ##' @export
 ##' @author Guangchuang Yu
 bbplot <- function(data, mapping = amp()) {
-    xvar <- quo_name(mapping$x)
-    yvar <- quo_name(mapping$y)
+    xx <- xvar(mapping)
+    yy <- yvar(mapping)
 
     p <- function() {
-        plot(data[[xvar]], data[[yvar]],
+        plot(data[[xx]], data[[yy]],
              type = 'n',
-             xlab = xvar,
-             ylab = yvar)
+             xlab = xx,
+             ylab = yy)
+
     }
 
     structure(list(
         plot = p,
         data = data,
         mapping = mapping,
-        xvar = xvar,
-        yvar = yvar,
         layer = list()
     ), class = "bbplot")
     
