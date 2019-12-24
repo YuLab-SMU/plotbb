@@ -3,16 +3,25 @@
 ##' bbplot layers
 ##' @title layer
 ##' @rdname layer
-##' @param p bbplot object
 ##' @param mapping aesthetic mapping
 ##' @param data layer data
 ##' @param position one of 'identity' or 'jitter'
 ##' @param ... addition parameter for the layer
-##' @return bbplot object
+##' @return A modified bbplot object
 ##' @importFrom graphics points
 ##' @export
 ##' @author Guangchuang Yu
-ly_point <- function(p, mapping = NULL, data = NULL, position = "identity", ...) {
+bb_point <- function(mapping = NULL, data = NULL, position = "identity", ...) {
+    structure(list(mapping = mapping,
+                   data = data,
+                   position = position,
+                   params = list(...),
+                   layer = ly_point
+                   ),
+              class = "bb_layer")
+}
+
+ly_point <- function(plot, mapping = NULL, data = NULL, position = "identity", ...) {
     position <- match.arg(position, c("identity", "jitter"))
 
     data <- bb_data(p, data)
@@ -38,5 +47,15 @@ ly_point <- function(p, mapping = NULL, data = NULL, position = "identity", ...)
     add_layer(p, ly)
 }
 
+##' @method bbplot_add bb_layer
+##' @export
+bbplot_add.bb_layer <- function(object, plot) {
+    ly <- object$layer
+    params <- c(object, unlist(object$params))
+    params <- params[names(params) != 'params']
+    params <- params[names(params) != 'layer']
+    params$plot <- plot
 
+    do.call(ly, params)
+}
 

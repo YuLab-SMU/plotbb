@@ -11,35 +11,62 @@ html_preview: false
 
 ## Aesthetic mapping
 
-`amp()` for **a**esthetic **m**a**p**ping, that equivalents to `ggplot2::aes()`.
+`bb_aes()` for aesthetic mapping, that equivalents to `ggplot2::aes()`.
 
 
-```{r fig1}
+```{r aes}
 library(bbplot)
 
-p <- bbplot(mtcars, amp(mpg, disp, col=factor(cyl)))
-p1 <- p %>% ly_point
-p2 <- p %>% ly_point %>% ly_lm(amp(group=cyl), lwd=2)
-p3 <- p2 %>% ly_lm(col="red", lwd=3, lty=2)
-par(mfrow=c(2,2))
-p; p1; p2; p3
+p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl)))
+p + bb_point()
 ```
+
+## Geometric layer
+
+```{r layer}
+p2 <- p + bb_point() + bb_lm(bb_aes(group=cyl), lwd=2)
+p3 <- p2 + bb_lm(col="red", lwd=3, lty='dotted')
+par(mfrow=c(1,2))
+p2; p3
+```
+
+### TODO
+
++ [x] bb_point
++ [x] bb_lm
++ more layers need to be added
+
 
 ## Setting labels
 
 ```{r labs}
-p2 %>% bblabs(title = "hello", sub = "just for demo",
+p2 + bb_labs(title = "hello", sub = "just for demo",
               xlab="this is xlab", ylab = "this is ylab")
 ```
 
 ## Theme
 
 ```{r theme, fig.width=10}
-g <- p2 %>%
-     bbtheme(col.main="red", cex.main=2,
-             mar = c(4, 4, 3, 1)) %>%
-     bbtitle("applying graphics::par")
+g <- p2 +
+     bb_theme(col.main="red", cex.main=2,
+             mar = c(4, 4, 3, 1)) +
+     bb_title("applying graphics::par")
 par(mfrow=c(1,2))
 print(g)
-p2 %>% bbtitle("theme has no side effect")
+p2 + bb_title("theme has no side effect")
 ```
+
+`bb_theme` has no side effect and will only apply to the `bbplot` that it added to. This is very important for developing pre-defined themes.
+
+### TODO
+
++ develop pre-defined themes
+
+## Scale
+
+Not yet implemented
+
+## Legend
+
+Not yet implemented
+

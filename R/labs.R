@@ -1,49 +1,53 @@
 ##' change labels for bbplot
 ##'
 ##' setting one or several of 'title', 'sub', 'xlab', and 'ylab'
-##' @title bblabs
+##' @title bb_labs
 ##' @rdname bblabs
-##' @param p bbplot object
 ##' @param title title
 ##' @param sub sub
 ##' @param xlab xlab
 ##' @param ylab ylab
 ##' @importFrom graphics title
 ##' @export
-##' @return bbplot object 
+##' @return A modified bbplot object 
 ##' @author Guangchuang Yu
-bblabs <- function(p, title = NULL, sub = NULL, xlab = NULL, ylab = NULL) {
-    if (!is.null(title)) p <- bbtitle(p, title)
-    if (!is.null(sub)) p <- bbsub(p, sub)
-    if (!is.null(xlab)) p <- bbxlab(p, xlab)
-    if (!is.null(ylab)) p <- bbylab(p, ylab)
-    return(p)
+bb_labs <- function(title = NULL, sub = NULL, xlab = NULL, ylab = NULL) {
+    structure(list(main = title,
+                   sub = sub,
+                   xlab = xlab,
+                   ylab = ylab
+                   ),
+              class = "bb_labs")
 }
 
 ##' @rdname bblabs
 ##' @export
-bbtitle <- function(p, title) {
-    p$labs$title <- function() title(main = title)
-    return(p)
+bb_title <- function(title) {
+    structure(list(main = title), class = "bb_labs")
 }
 
 ##' @rdname bblabs
 ##' @export
-bbsub <- function(p, sub) {
-    p$labs$sub <- function() title(sub = sub)
-    return(p)
+bb_sub <- function(sub) {
+    structure(list(sub = sub), class = "bb_labs")
 }
 
 ##' @rdname bblabs
 ##' @export
-bbxlab <- function(p, xlab) {
-    p$labs$xlab <- function() title(xlab = xlab)
-    return(p)
+bb_xlab <- function(p, xlab) {
+    structure(list(xlab = xlab), class = "bb_labs")
 }
 
 ##' @rdname bblabs
 ##' @export
-bbylab <- function(p, ylab) {
-    p$labs$ylab <- function() title(ylab = ylab)
-    return(p)
+bb_ylab <- function(p, ylab) {
+    structure(list(ylab = ylab), class = "bb_labs")
+}
+
+
+##' @method bbplot_add bb_labs
+##' @export
+bbplot_add.bb_labs <- function(object, plot) {
+    plot$labs <- modifyList(plot$labs, object)
+    plot
 }
