@@ -59,9 +59,18 @@ p2 + bb_title("theme has no side effect")
 `bb_theme` has no side effect and will only apply to the `bbplot` that
 it added to. This is very important for developing pre-defined themes.
 
+``` r
+par(mfrow=c(1,2))
+p3 + bb_theme_expand()
+print(p3)
+```
+
+![](README_files/figure-gfm/theme-expand-1.png)<!-- -->
+
 ### TODO
 
-  - develop pre-defined themes
+  - [x] bb\_theme\_expand
+  - develop more pre-defined themes
 
 ## Scale
 

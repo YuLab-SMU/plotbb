@@ -2,9 +2,12 @@
 % Please edit documentation in R/theme.R
 \name{bb_theme}
 \alias{bb_theme}
+\alias{bb_theme_expand}
 \title{bb_theme}
 \usage{
 bb_theme(...)
+
+bb_theme_expand(...)
 }
 \arguments{
 \item{...}{parameters for graphics::par}
