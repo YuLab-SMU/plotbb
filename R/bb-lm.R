@@ -15,6 +15,7 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
     data <- bb_data(plot, data)
     mapping <- bb_mapping(plot, mapping)
 
+    layer_name <- "linear regression layer"
     formula <- stats::as.formula(paste(yvar(mapping), '~', xvar(mapping)))
     if (is.null(mapping$group)) {
         d2 <- lm_data(formula, data)
@@ -24,7 +25,7 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
                      x1 = d2$x1,
                      y1 = d2$y1, ...)
         }
-        plot <- add_layer(plot, ly)
+        plot <- add_layer(plot, ly, layer_name)
         return(plot)
     }
 
@@ -58,7 +59,7 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
         }
     }
     #with_env(ly, lm_env(d2))
-    plot <- add_layer(plot, ly)
+    plot <- add_layer(plot, ly, layer_name)
     return(plot)
 }
 

@@ -61,3 +61,6 @@ bb_col <- function(mapping, data) {
 ##' @importFrom magrittr %>%
 ##' @export
 magrittr::`%>%`
+
+
+utils::globalVariables(".")

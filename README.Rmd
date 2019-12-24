@@ -41,7 +41,8 @@ p2; p3
 
 ```{r labs}
 p2 + bb_labs(title = "hello", sub = "just for demo",
-              xlab="this is xlab", ylab = "this is ylab")
+              xlab="this is xlab", ylab = "this is ylab") +
+  bb_title("hello world") # last one rules            
 ```
 
 ## Theme

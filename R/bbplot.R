@@ -24,7 +24,9 @@ bbplot <- function(data, mapping = bb_aes()) {
         canvas = p,
         data = data,
         mapping = mapping,
-        layer = list(),
+        layer = structure(
+            list(),
+            class = "bbplot_layer_list"),
         theme = list(),
         labs = list(main = NULL,
                     sub = NULL,

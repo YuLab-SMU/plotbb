@@ -34,13 +34,13 @@ bb_sub <- function(sub) {
 
 ##' @rdname bblabs
 ##' @export
-bb_xlab <- function(p, xlab) {
+bb_xlab <- function(xlab) {
     structure(list(xlab = xlab), class = "bb_labs")
 }
 
 ##' @rdname bblabs
 ##' @export
-bb_ylab <- function(p, ylab) {
+bb_ylab <- function(ylab) {
     structure(list(ylab = ylab), class = "bb_labs")
 }
 

@@ -19,9 +19,15 @@ print.bbplot <- function(x, ...) {
 
     labs <- x$labs[!is.null(x$labs)]
     do.call(title, labs)
-    ## for (lab in x$labs) {
-    ##     if (!is.null(lab)) eval(lab())
-    ## }
 
     assign(".last_plot", x, envir = .bbplot)
 }
+
+
+##' @method print bbplot_layer_list
+##' @export
+print.bbplot_layer_list <- function(x, ...) {
+    cat(length(x), "layers added to the plot\n")
+    cat(paste0("  ", seq_along(x), ". ", names(x), collapse="\n"), "\n")
+}
+

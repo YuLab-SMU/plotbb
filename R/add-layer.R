@@ -23,13 +23,10 @@ bbplot_add <- function(object, plot) {
 
 
 
-add_layer <- function(plot, layer) {
-    nlayer <- length(plot$layer)
-    if (nlayer == 0) {
-        plot$layer <- list(layer)
-    } else {
-        plot$layer[[nlayer + 1]] <- layer
-    }
+add_layer <- function(plot, layer, layer_name) {
+    nlayer <- length(plot$layer) + 1
+    plot$layer[[nlayer]] <- layer
+    names(plot$layer)[nlayer] <- layer_name
     return(plot)
 }
 

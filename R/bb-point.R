@@ -24,8 +24,8 @@ bb_point <- function(mapping = NULL, data = NULL, position = "identity", ...) {
 ly_point <- function(plot, mapping = NULL, data = NULL, position = "identity", ...) {
     position <- match.arg(position, c("identity", "jitter"))
 
-    data <- bb_data(p, data)
-    mapping <- bb_mapping(p, mapping)
+    data <- bb_data(plot, data)
+    mapping <- bb_mapping(plot, mapping)
 
     x <- data[[xvar(mapping)]]
     y <- data[[yvar(mapping)]]
@@ -44,7 +44,7 @@ ly_point <- function(plot, mapping = NULL, data = NULL, position = "identity", .
     }
 
     ly <- function() do.call(points, params)
-    add_layer(p, ly)
+    add_layer(plot, ly, "point layer")
 }
 
 ##' @method bbplot_add bb_layer

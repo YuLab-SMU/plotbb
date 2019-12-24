@@ -14,9 +14,9 @@ bb_title(title)
 
 bb_sub(sub)
 
-bb_xlab(p, xlab)
+bb_xlab(xlab)
 
-bb_ylab(p, ylab)
+bb_ylab(ylab)
 }
 \arguments{
 \item{title}{title}
