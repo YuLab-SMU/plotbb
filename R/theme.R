@@ -26,8 +26,7 @@ bb_theme_expand <- function(...) {
                            mgp=c(2,0.4,0),
                            tck=-.01,
                            cex.axis=.9,
-                           las=1,
-                           col.lab='grey50'
+                           las=1
                            )
     params <- modifyList(default_params, list(...))
     structure(params, class = "bb_theme")
