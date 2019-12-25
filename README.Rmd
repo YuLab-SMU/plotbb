@@ -79,3 +79,29 @@ Not yet implemented
 
 Not yet implemented
 
+
+## Using existing code with bbplot
+
+Suppose we have existing code to plot something:
+
+```r
+plot(mtcars$mpg, mtcars$disp)
+abline(lm(disp ~ mpg, data=mtcars), col='red')
+```
+
+We can wrap the codes into a function:
+
+```{r}
+f <- function() {
+  plot(mtcars$mpg, mtcars$disp)
+  abline(lm(disp ~ mpg, data=mtcars), col='red')
+}
+```
+
+Then we can convert it to a `bbplot` object. The plot produced by the function will be used as canvas, and we can apply theme and add layers to it:
+
+```{r base}
+as.bbplot(f) +
+   bb_theme_expand() +
+   bb_lm(bb_aes(mpg, disp, group=cyl, col=factor(cyl)), data=mtcars, lwd=2, lty='dashed')
+```

@@ -20,19 +20,8 @@ bbplot <- function(data, mapping = bb_aes()) {
 
     }
     
-    structure(list(
-        canvas = p,
-        data = data,
-        mapping = mapping,
-        layer = structure(
-            list(),
-            class = "bbplot_layer_list"),
-        theme = list(),
-        labs = list(main = NULL,
-                    sub = NULL,
-                    xlab = xx,
-                    ylab = yy)
-    ), class = "bbplot")
+    .bbplot_initial(p, data, mapping) +
+        bb_labs(xlab = xx, ylab = yy)
 }
 
 
