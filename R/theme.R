@@ -30,7 +30,7 @@ bb_theme_expand <- function(...) {
         mgp=c(2,0.4,0),
         tck=-.01,
         cex.axis=.9
-    )  <= bb_theme(...)
+    ) <= bb_theme(...)
 }
 
 ##' @rdname bb-theme
@@ -42,7 +42,7 @@ bb_theme_grey <- function(...) {
         fg = "grey20",
         col.axis = "grey20",
         col.lab = "grey20"
-    )  <= bb_theme(...)
+    ) <= bb_theme(...)
 }
 
 ##' @rdname bb-theme
@@ -56,3 +56,7 @@ bb_theme_deepblue <- function(...) {
     ) <= bb_theme(...)
 }
 
+build_theme <- function(default, ...) {
+    ## default is a list of default setting
+    do.call(bb_theme, default) <= bb_theme(...)
+}

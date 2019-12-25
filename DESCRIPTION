@@ -6,7 +6,7 @@ Authors@R: c(
      )
 Description: Proof of concept for implementing grammar of graphics using base plot.
 Imports:
-	graphics,
+  graphics,
   magrittr,
   rlang,
   methods,
