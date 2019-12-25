@@ -69,9 +69,19 @@ print(p3)
 
 ![](README_files/figure-gfm/theme-expand-1.png)<!-- -->
 
+``` r
+p + bb_grid(col='grey50', lty='dashed') +
+  bb_point(pch=19) +
+  bb_theme_grey() +
+  bb_theme_expand()
+```
+
+![](README_files/figure-gfm/theme-grey-1.png)<!-- -->
+
 ### TODO
 
   - [x] bb\_theme\_expand
+  - [x] bb\_theme\_grey
   - develop more pre-defined themes
 
 ## Scale
@@ -111,6 +121,7 @@ d <- group_by(mtcars, cyl) %>%
 
 as.bbplot(f) +
    bb_theme_expand() +
+   bb_theme_grey() +
    bb_lm(bb_aes(mpg, disp, group=cyl, col=factor(cyl)), data=mtcars, lwd=2, lty='dashed') +
    bb_point(bb_aes(xm, ym, col=factor(cyl)), data=d, pch=19, cex=2)
 ```

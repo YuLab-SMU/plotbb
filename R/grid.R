@@ -9,7 +9,7 @@
 ##' @return A modified bbplot object
 ##' @export
 ##' @author Guangchuang Yu
-bb_grid <- function(col = par("fg"), lty = par("lty"), lwd = par("lwd")) {
+bb_grid <- function(col = 'lightgray', lty = par("lty"), lwd = par("lwd")) {
     structure(list(col = col,
                    lty = lty,
                    lwd = lwd,

@@ -66,16 +66,24 @@ p2 + bb_title("theme has no side effect")
 `bb_theme` has no side effect and will only apply to the `bbplot` object that it added to.
 This is very important for developing pre-defined themes.
 
+
 ```{r theme-expand, fig.width=10}
 par(mfrow=c(1,2))
 p3 + bb_theme_expand()
 print(p3)
 ```
 
+```{r theme-grey}
+p + bb_grid(col='grey50', lty='dashed') +
+  bb_point(pch=19) +
+  bb_theme_grey() +
+  bb_theme_expand()
+```
 
 ### TODO
 
 + [x] bb_theme_expand
++ [x] bb_theme_grey
 + develop more pre-defined themes
 
 ## Scale
@@ -114,6 +122,7 @@ d <- group_by(mtcars, cyl) %>%
 
 as.bbplot(f) +
    bb_theme_expand() +
+   bb_theme_grey() +
    bb_lm(bb_aes(mpg, disp, group=cyl, col=factor(cyl)), data=mtcars, lwd=2, lty='dashed') +
    bb_point(bb_aes(xm, ym, col=factor(cyl)), data=d, pch=19, cex=2)
 ```

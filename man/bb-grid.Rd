@@ -4,7 +4,7 @@
 \alias{bb_grid}
 \title{bb_grid}
 \usage{
-bb_grid(col = par("fg"), lty = par("lty"), lwd = par("lwd"))
+bb_grid(col = "lightgray", lty = par("lty"), lwd = par("lwd"))
 }
 \arguments{
 \item{col}{line color}
