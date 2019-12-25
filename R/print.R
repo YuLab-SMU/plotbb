@@ -13,6 +13,12 @@ print.bbplot <- function(x, ...) {
         suppressWarnings(par(new = TRUE))
 
     eval(x$canvas())
+    if (!is.null(x$panel.first)) {
+        eval(x$panel.first())
+    } 
+    
+    
+
     for(ly in x$layer) {
         eval(ly())
     }

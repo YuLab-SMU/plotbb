@@ -17,7 +17,6 @@ bbplot <- function(data, mapping = bb_aes()) {
              type = 'n',
              xlab = "", 
              ylab = "")
-
     }
     
     .bbplot_initial(p, data, mapping) +

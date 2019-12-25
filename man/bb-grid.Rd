@@ -4,7 +4,7 @@
 \alias{bb_grid}
 \title{bb_grid}
 \usage{
-bb_grid(col = "lightgray", lty = par("lty"), lwd = par("lwd"))
+bb_grid(col = "lightgray", lty = par("lty"), lwd = par("lwd"), bg = TRUE)
 }
 \arguments{
 \item{col}{line color}
@@ -12,6 +12,8 @@ bb_grid(col = "lightgray", lty = par("lty"), lwd = par("lwd"))
 \item{lty}{line type}
 
 \item{lwd}{line width}
+
+\item{bg}{whether plot the grid lines as background}
 }
 \value{
 A modified bbplot object

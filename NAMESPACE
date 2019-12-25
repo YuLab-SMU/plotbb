@@ -2,6 +2,7 @@
 
 S3method("+",bbplot)
 S3method("<=",bb_theme)
+S3method(bbplot_add,bb_grid)
 S3method(bbplot_add,bb_labs)
 S3method(bbplot_add,bb_layer)
 S3method(bbplot_add,bb_theme)

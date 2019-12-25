@@ -24,6 +24,7 @@ as.bbplot <- function(fun) {
         labs = list(main = NULL,
                     sub = NULL,
                     xlab = NULL,
-                    ylab = NULL)
+                    ylab = NULL),
+        panel.first = NULL
     ), class = "bbplot")
 }
