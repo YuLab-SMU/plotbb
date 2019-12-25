@@ -56,8 +56,9 @@ p2 + bb_title("theme has no side effect")
 
 ![](README_files/figure-gfm/theme-1.png)<!-- -->
 
-`bb_theme` has no side effect and will only apply to the `bbplot` that
-it added to. This is very important for developing pre-defined themes.
+`bb_theme` has no side effect and will only apply to the `bbplot` object
+that it added to. This is very important for developing pre-defined
+themes.
 
 ``` r
 par(mfrow=c(1,2))
@@ -80,7 +81,7 @@ Not yet implemented
 
 Not yet implemented
 
-## Using existing code with bbplot
+## Using existing code with ggbase
 
 Suppose we have existing code to plot something:
 
