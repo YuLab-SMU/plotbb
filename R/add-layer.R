@@ -30,4 +30,10 @@ add_layer <- function(plot, layer, layer_name) {
     return(plot)
 }
 
-
+##' @method <= bb_theme
+##' @importFrom methods is
+##' @export
+`<=.bb_theme` <- function(e1, e2) {
+    stopifnot(is(e2, "bb_theme"))
+    modifyList(e1, e2)
+}

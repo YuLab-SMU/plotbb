@@ -17,7 +17,7 @@ bb_theme <- function(...) {
 ##' @method bbplot_add bb_theme
 ##' @export
 bbplot_add.bb_theme <- function(object, plot) {
-    plot$theme <- modifyList(plot$theme, object)
+    plot$theme <- plot$theme <= object
     plot
 }
 
@@ -25,35 +25,34 @@ bbplot_add.bb_theme <- function(object, plot) {
 ##' @rdname bb-theme
 ##' @export
 bb_theme_expand <- function(...) {
-    theme_default <- bb_theme(
+    bb_theme(
         mar=c(3,3,2,1),
         mgp=c(2,0.4,0),
         tck=-.01,
         cex.axis=.9
-    )
-    modifyList(theme_default, bb_theme(...))
+    )  <= bb_theme(...)
 }
 
 ##' @rdname bb-theme
 ##' @export
 bb_theme_grey <- function(...) {
-    theme_default <- bb_theme(
+    bb_theme(
         cex.axis = .9,
         bg = "grey85",
         fg = "grey20",
         col.axis = "grey20",
         col.lab = "grey20"
-        )
-    modifyList(theme_default, bb_theme(...))
+    )  <= bb_theme(...)
 }
 
 ##' @rdname bb-theme
 ##' @export
 bb_theme_deepblue <- function(...) {
-    theme_default <- bb_theme(
+    bb_theme(
         bg = "#002E49",
         fg = "#CCCCCC",
         col.axis = "#BEBEBE",
         col.lab = "#FFFFFF"
-    )
+    ) <= bb_theme(...)
 }
+

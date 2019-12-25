@@ -9,6 +9,7 @@ Imports:
 	graphics,
   magrittr,
   rlang,
+  methods,
   utils
 Suggests:
   stats,
