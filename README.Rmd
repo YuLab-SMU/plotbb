@@ -76,14 +76,21 @@ print(p3)
 ```{r theme-grey}
 p + bb_grid(col='grey50', lty='dashed') +
   bb_point(pch=19) +
-  bb_theme_grey() +
-  bb_theme_expand()
+  bb_theme_expand() +
+  bb_theme_grey()
+```
+
+```{r theme-blue}
+p + bb_point(pch=19, cex=2) +
+  bb_theme_expand() +
+  bb_theme_deepblue()
 ```
 
 ### TODO
 
 + [x] bb_theme_expand
 + [x] bb_theme_grey
++ [x] bb_theme_deepblue
 + develop more pre-defined themes
 
 ## Scale

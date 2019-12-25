@@ -72,16 +72,25 @@ print(p3)
 ``` r
 p + bb_grid(col='grey50', lty='dashed') +
   bb_point(pch=19) +
-  bb_theme_grey() +
-  bb_theme_expand()
+  bb_theme_expand() +
+  bb_theme_grey()
 ```
 
 ![](README_files/figure-gfm/theme-grey-1.png)<!-- -->
+
+``` r
+p + bb_point(pch=19, cex=2) +
+  bb_theme_expand() +
+  bb_theme_deepblue()
+```
+
+![](README_files/figure-gfm/theme-blue-1.png)<!-- -->
 
 ### TODO
 
   - [x] bb\_theme\_expand
   - [x] bb\_theme\_grey
+  - [x] bb\_theme\_deepblue
   - develop more pre-defined themes
 
 ## Scale

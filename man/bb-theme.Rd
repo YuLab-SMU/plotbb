@@ -4,6 +4,7 @@
 \alias{bb_theme}
 \alias{bb_theme_expand}
 \alias{bb_theme_grey}
+\alias{bb_theme_deepblue}
 \title{bb_theme}
 \usage{
 bb_theme(...)
@@ -11,6 +12,8 @@ bb_theme(...)
 bb_theme_expand(...)
 
 bb_theme_grey(...)
+
+bb_theme_deepblue(...)
 }
 \arguments{
 \item{...}{parameters for graphics::par}

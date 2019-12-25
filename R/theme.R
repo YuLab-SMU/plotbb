@@ -8,7 +8,10 @@
 ##' @export
 ##' @author Guangchuang Yu
 bb_theme <- function(...) {
-    structure(list(...), class = "bb_theme")
+    params <- modifyList(list(las = 1),
+                         list(...)
+                         )
+    structure(params, class = "bb_theme")
 }
 
 ##' @method bbplot_add bb_theme
@@ -26,8 +29,7 @@ bb_theme_expand <- function(...) {
         mar=c(3,3,2,1),
         mgp=c(2,0.4,0),
         tck=-.01,
-        cex.axis=.9,
-        las=1
+        cex.axis=.9
     )
     modifyList(theme_default, bb_theme(...))
 }
@@ -36,9 +38,22 @@ bb_theme_expand <- function(...) {
 ##' @export
 bb_theme_grey <- function(...) {
     theme_default <- bb_theme(
-        cex.axis = .9, bg = "grey85",
+        cex.axis = .9,
+        bg = "grey85",
         fg = "grey20",
         col.axis = "grey20",
-        col.lab = "grey20")
+        col.lab = "grey20"
+        )
     modifyList(theme_default, bb_theme(...))
+}
+
+##' @rdname bb-theme
+##' @export
+bb_theme_deepblue <- function(...) {
+    theme_default <- bb_theme(
+        bg = "#002E49",
+        fg = "#CCCCCC",
+        col.axis = "#BEBEBE",
+        col.lab = "#FFFFFF"
+    )
 }
