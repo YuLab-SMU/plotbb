@@ -1,4 +1,4 @@
-Package: bbplot
+Package: ggbase
 Title: Grammar of Graphics for 'base' Plot
 Version: 0.0.1
 Authors@R: c(

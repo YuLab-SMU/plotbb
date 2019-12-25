@@ -12,36 +12,37 @@
 ##' @return A modified bbplot object 
 ##' @author Guangchuang Yu
 bb_labs <- function(title = NULL, sub = NULL, xlab = NULL, ylab = NULL) {
-    structure(list(main = title,
-                   sub = sub,
-                   xlab = xlab,
-                   ylab = ylab
-                   ),
-              class = "bb_labs")
+    labs <- list(main = title,
+                 sub = sub,
+                 xlab = xlab,
+                 ylab = ylab
+                 )
+    labs <- labs[!vapply(labs, is.null, logical(1))]
+    structure(labs, class = "bb_labs")
 }
 
 ##' @rdname bblabs
 ##' @export
 bb_title <- function(title) {
-    structure(list(main = title), class = "bb_labs")
+    bb_labs(title = title)
 }
 
 ##' @rdname bblabs
 ##' @export
 bb_sub <- function(sub) {
-    structure(list(sub = sub), class = "bb_labs")
+    bb_labs(sub = sub)
 }
 
 ##' @rdname bblabs
 ##' @export
 bb_xlab <- function(xlab) {
-    structure(list(xlab = xlab), class = "bb_labs")
+    bb_labs(xlab = xlab)
 }
 
 ##' @rdname bblabs
 ##' @export
 bb_ylab <- function(ylab) {
-    structure(list(ylab = ylab), class = "bb_labs")
+    bb_labs(ylab = ylab)
 }
 
 

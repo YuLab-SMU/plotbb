@@ -11,7 +11,7 @@ html_preview: false
 
 ```{r include=F}
 library(dplyr)
-library(bbplot)
+library(ggbase)
 ```
 
 ## Aesthetic mapping
@@ -20,7 +20,7 @@ library(bbplot)
 
 
 ```{r aes}
-library(bbplot)
+library(ggbase)
 
 p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl)))
 p + bb_point()

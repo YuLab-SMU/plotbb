@@ -17,8 +17,7 @@ print.bbplot <- function(x, ...) {
         eval(ly())
     }
 
-    labs <- x$labs[!is.null(x$labs)]
-    do.call(title, labs)
+    do.call(title, x$labs)
 
     assign(".last_plot", x, envir = .bbplot)
 }
