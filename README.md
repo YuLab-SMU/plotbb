@@ -10,7 +10,7 @@
 library(plotbb)
 
 p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl)))
-p + bb_point()
+p + bb_grid(col='grey50', lty='dashed') + bb_point(pch=19)
 ```
 
 ![](README_files/figure-gfm/aes-1.png)<!-- -->
@@ -28,6 +28,7 @@ p2; p3
 
 ### TODO
 
+  - [x] bb\_grid
   - [x] bb\_point
   - [x] bb\_lm
   - more layers need to be added

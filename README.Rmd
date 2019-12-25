@@ -23,7 +23,7 @@ library(plotbb)
 library(plotbb)
 
 p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl)))
-p + bb_point()
+p + bb_grid(col='grey50', lty='dashed') + bb_point(pch=19)
 ```
 
 ## Geometric layer
@@ -37,6 +37,7 @@ p2; p3
 
 ### TODO
 
++ [x] bb_grid
 + [x] bb_point
 + [x] bb_lm
 + more layers need to be added
