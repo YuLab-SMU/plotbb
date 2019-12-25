@@ -82,7 +82,7 @@ Not yet implemented
 
 Not yet implemented
 
-## Using existing code with bbplot
+## Using existing code with plotbb
 
 Suppose we have existing code to plot something:
 
