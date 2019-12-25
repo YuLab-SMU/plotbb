@@ -103,9 +103,28 @@ function will be used as canvas, and we can apply theme and add layers
 to it:
 
 ``` r
+library(dplyr)
+```
+
+    ## 
+    ## Attaching package: 'dplyr'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     filter, lag
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     intersect, setdiff, setequal, union
+
+``` r
+d <- group_by(mtcars, cyl) %>%
+  summarize(xm=mean(mpg), ym=mean(disp))
+
 as.bbplot(f) +
    bb_theme_expand() +
-   bb_lm(bb_aes(mpg, disp, group=cyl, col=factor(cyl)), data=mtcars, lwd=2, lty='dashed')
+   bb_lm(bb_aes(mpg, disp, group=cyl, col=factor(cyl)), data=mtcars, lwd=2, lty='dashed') +
+   bb_point(bb_aes(xm, ym, col=factor(cyl)), data=d, pch=19, cex=2)
 ```
 
 ![](README_files/figure-gfm/base-1.png)<!-- -->

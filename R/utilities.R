@@ -43,7 +43,7 @@ bb_col <- function(mapping, data) {
     if (is.numeric(col_var)) {
         stop("not supported yet")
     } else {
-        ucol <- unique(col_var)
+        ucol <- sort(unique(col_var))
         cols <- colorspace::rainbow_hcl(length(ucol))
         names(cols) <- ucol
         col_vec <- cols[as.character(col_var)]
