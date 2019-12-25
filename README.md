@@ -7,7 +7,7 @@
 `bb_aes()` for aesthetic mapping, that equivalents to `ggplot2::aes()`.
 
 ``` r
-library(ggbase)
+library(plotbb)
 
 p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl)))
 p + bb_point()
@@ -81,7 +81,7 @@ Not yet implemented
 
 Not yet implemented
 
-## Using existing code with ggbase
+## Using existing code with bbplot
 
 Suppose we have existing code to plot something:
 

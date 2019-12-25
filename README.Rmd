@@ -11,7 +11,7 @@ html_preview: false
 
 ```{r include=F}
 library(dplyr)
-library(ggbase)
+library(plotbb)
 ```
 
 ## Aesthetic mapping
@@ -20,7 +20,7 @@ library(ggbase)
 
 
 ```{r aes}
-library(ggbase)
+library(plotbb)
 
 p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl)))
 p + bb_point()
@@ -86,7 +86,7 @@ Not yet implemented
 Not yet implemented
 
 
-## Using existing code with ggbase
+## Using existing code with bbplot
 
 Suppose we have existing code to plot something:
 
