@@ -99,25 +99,11 @@ f <- function() {
 ```
 
 Then we can convert it to a `bbplot` object. The plot produced by the
-function will be used as canvas, and we can apply theme and add layers
-to it:
+function will be used as the canvas, and we can apply theme and add
+layers to it:
 
 ``` r
 library(dplyr)
-```
-
-    ## 
-    ## Attaching package: 'dplyr'
-
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
-``` r
 d <- group_by(mtcars, cyl) %>%
   summarize(xm=mean(mpg), ym=mean(disp))
 

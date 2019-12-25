@@ -9,6 +9,11 @@ html_preview: false
 
 # Grammar of Graphics for base plot
 
+```{r include=F}
+library(dplyr)
+library(bbplot)
+```
+
 ## Aesthetic mapping
 
 `bb_aes()` for aesthetic mapping, that equivalents to `ggplot2::aes()`.
@@ -98,7 +103,7 @@ f <- function() {
 }
 ```
 
-Then we can convert it to a `bbplot` object. The plot produced by the function will be used as canvas, and we can apply theme and add layers to it:
+Then we can convert it to a `bbplot` object. The plot produced by the function will be used as the canvas, and we can apply theme and add layers to it:
 
 ```{r base}
 library(dplyr)
