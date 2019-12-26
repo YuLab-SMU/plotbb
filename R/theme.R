@@ -8,9 +8,14 @@
 ##' @export
 ##' @author Guangchuang Yu
 bb_theme <- function(...) {
-    params <- modifyList(list(las = 1),
-                         list(...)
-                         )
+    default <- list(
+        cex.axis = .9,
+        las = 1
+    )
+    params <- modifyList(
+        default,
+        list(...)
+    )
     structure(params, class = "bb_theme")
 }
 
@@ -28,8 +33,7 @@ bb_theme_expand <- function(...) {
     bb_theme(
         mar=c(3,3,2,1),
         mgp=c(2,0.4,0),
-        tck=-.01,
-        cex.axis=.9
+        tck=-.01
     ) <= bb_theme(...)
 }
 
@@ -37,7 +41,6 @@ bb_theme_expand <- function(...) {
 ##' @export
 bb_theme_grey <- function(...) {
     bb_theme(
-        cex.axis = .9,
         bg = "grey85",
         fg = "grey20",
         col.axis = "grey20",
