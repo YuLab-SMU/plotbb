@@ -132,7 +132,9 @@ as.bbplot(f) +
    bb_theme_expand() +
    bb_theme_grey() +
    bb_lm(bb_aes(mpg, disp, group=cyl, col=factor(cyl)), data=mtcars, lwd=2, lty='dashed') +
-   bb_point(bb_aes(xm, ym, col=factor(cyl)), data=d, pch=19, cex=2)
+   bb_point(bb_aes(xm, ym, col=factor(cyl)), data=d, pch=19, cex=2) +
+   bb_title("hello plotbb") +
+   bb_grid(col='grey30', lty='dashed') ## grid lines were plotted as background by default
 ```
 
 ![](README_files/figure-gfm/base-1.png)<!-- -->
