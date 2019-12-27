@@ -1,5 +1,6 @@
 # plotbb 0.0.1
 
++ `bb_text`
 + `as.bbplot` to convert function as `bbplot` object
 + `bb_grid` to add grid line (background grid line by default)
 + `bb_theme_expand`, `bb_theme_grey` and `bb_theme_deepblue`

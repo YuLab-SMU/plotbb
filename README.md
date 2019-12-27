@@ -20,8 +20,9 @@ p + bb_grid(col='grey50', lty='dashed') + bb_point(pch=19)
 ``` r
 p2 <- p + bb_point() + bb_lm(bb_aes(group=cyl), lwd=2)
 p3 <- p2 + bb_lm(col="red", lwd=3, lty='dotted')
-par(mfrow=c(1,2))
-p2; p3
+p4 <- p + bb_text(bb_aes(label=cyl), cex=2)
+par(mfrow=c(1,3))
+p2; p3; p4
 ```
 
 ![](README_files/figure-gfm/layer-1.png)<!-- -->
@@ -31,6 +32,7 @@ p2; p3
   - [x] bb\_grid
   - [x] bb\_point
   - [x] bb\_lm
+  - [x] bb\_text
   - more layers need to be added
 
 ## Setting labels
