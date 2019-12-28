@@ -1,5 +1,6 @@
 # plotbb 0.0.1
 
++ formula, expression and function can be added to `bbplot` object (2019-12-28, Sat)
 + `bb_text`
 + `as.bbplot` to convert function as `bbplot` object
 + `bb_grid` to add grid line (background grid line by default)

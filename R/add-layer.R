@@ -23,7 +23,7 @@ bbplot_add <- function(object, plot) {
 
 
 
-add_layer <- function(plot, layer, layer_name) {
+add_layer <- function(plot, layer, layer_name = "customized layer") {
     nlayer <- length(plot$layer) + 1
     plot$layer[[nlayer]] <- layer
     names(plot$layer)[nlayer] <- layer_name
@@ -37,3 +37,18 @@ add_layer <- function(plot, layer, layer_name) {
     stopifnot(is(e2, "bb_theme"))
     modifyList(e1, e2)
 }
+
+##' @method bbplot_add formula
+bbplot_add.formula <- function(object, plot) {
+    envir <- parent.frame()
+    layer <- plot_fun(object)
+    with_env(layer, envir)
+    add_layer(plot, layer)
+}
+
+##' @method bbplot_add expression
+bbplot_add.expression <- bbplot_add.formula
+
+##' @method bbplot_add function
+bbplot_add.function <- bbplot_add.formula
+

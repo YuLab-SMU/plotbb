@@ -130,13 +130,23 @@ library(dplyr)
 d <- group_by(mtcars, cyl) %>%
   summarize(xm=mean(mpg), ym=mean(disp))
 
-as.bbplot(f) +
+pp <- as.bbplot(f) +
    bb_theme_expand() +
    bb_theme_grey() +
    bb_lm(bb_aes(mpg, disp, group=cyl, col=factor(cyl)), data=mtcars, lwd=2, lty='dashed') +
    bb_point(bb_aes(xm, ym, col=factor(cyl)), data=d, pch=19, cex=2) +
    bb_title("hello plotbb") +
    bb_grid(col='grey30', lty='dashed') ## grid lines were plotted as background by default
+```
+
+As there are many features currently not available, `plotbb` supports
+adding layers using base graphics commands that you are already familiar
+with. Any base graphics commands in formula, expression or function can
+be served as layer to be added to a `bbplot` object.
+
+``` r
+pp + (~points(30, 400, pch=19, col="red", cex=3)) +
+   ~text(30, 420, label="hae fun :)", col="blue", cex=1.2)
 ```
 
 ![](README_files/figure-gfm/base-1.png)<!-- -->

@@ -4,6 +4,21 @@ with_env <- function(f, e=parent.frame()) {
     f
 }
 
+
+plot_fun <- function(x) {
+    if (inherits(x, "formula")) {
+        ## convert to expression
+        x <- parse(text=as.character(x)[2])
+    } 
+
+    function() {
+        if (inherits(x, "function"))
+            return(x())
+        eval(x)
+    }
+}
+
+
 bb_data <- function(p, data) {
     data %||% p$data    
 }
