@@ -22,7 +22,7 @@ ly_text <- function(plot, mapping = NULL, data = NULL, ...) {
 
 
     ly <- function() {
-        if (!is.null(mapping$col)) {
+        if (!is.null(mapping$col) && !is.null(params$col)) {
             col_vec <- bb_col(mapping, data,
                               palette = get("palette", envir = plot$env))
             params <- modifyList(params, list(col = col_vec))
@@ -30,7 +30,7 @@ ly_text <- function(plot, mapping = NULL, data = NULL, ...) {
 
         do.call(text, params)
     }
-    
+
     add_layer(plot, ly, "text layer")
 }
 
