@@ -6,7 +6,7 @@ bb_lm <- function(mapping = NULL, data = NULL, ...) {
 
 ##' @importFrom graphics segments
 ##' @importFrom graphics par
-ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
+ly_lm <- function(plot, mapping = NULL, data = NULL, ..., palette = NULL) {
     data <- bb_data(plot, data)
     mapping <- bb_mapping(plot, mapping)
 
@@ -29,7 +29,7 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
     ugrp <- unique(grp)
     cols <- NULL
     if (is.null(params$col) && !is.null(mapping$col)) {
-        cols <- unique(bb_col(mapping, data))
+        cols <- unique(bb_col(mapping, data, palette = palette))
     }
 
     d2 <- lapply(ugrp, function(g) {

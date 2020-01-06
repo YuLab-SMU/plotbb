@@ -1,3 +1,8 @@
+# plotbb 0.0.2
+
++ `bb_tile` for plotting heatmap (2020-01-06, Mon)
++ `bb_col` supports both character and numeric variable
+
 # plotbb 0.0.1
 
 + formula, expression and function can be added to `bbplot` object (2019-12-28, Sat)

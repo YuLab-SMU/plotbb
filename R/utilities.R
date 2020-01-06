@@ -53,14 +53,20 @@ parse_mapping <- function(mapping, name, data) {
     eval(parse(text=sub(v2, "data[[v2]]", v)))
 }
 
-bb_col <- function(mapping, data) {
+##' @importFrom scales col_numeric
+##' @importFrom scales col_factor
+bb_col <- function(mapping, data, palette = NULL) {
     col_var <- parse_mapping(mapping, 'col', data)
     if (is.numeric(col_var)) {
-        f <- scales::col_numeric("viridis", col_var)
+        if (is.null(palette)) palette <- "viridis"
+        f <- scales::col_numeric(palette, col_var)
         col_vec <- f(col_var)
     } else {
         ucol <- sort(unique(col_var))
-        cols <- colorspace::rainbow_hcl(length(ucol))
+        if (is.null(palette)) palette <- "Set2"
+        f <- scales::col_factor(palette, ucol)
+        ## cols <- colorspace::rainbow_hcl(length(ucol))
+        cols <- f(ucol)
         names(cols) <- ucol
         col_vec <- cols[as.character(col_var)]
     }

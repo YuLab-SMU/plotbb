@@ -5,7 +5,7 @@ bb_text <- function(mapping = NULL, data = NULL, ...) {
 }
 
 ##' @importFrom graphics text
-ly_text <- function(plot, mapping = NULL, data = NULL, ...) {
+ly_text <- function(plot, mapping = NULL, data = NULL, palette = NULL, ...) {
     data <- bb_data(plot, data)
     mapping <- bb_mapping(plot, mapping)
     x <- data[[xvar(mapping)]]
@@ -21,7 +21,7 @@ ly_text <- function(plot, mapping = NULL, data = NULL, ...) {
     }
 
     if (!is.null(mapping$col)) {
-        col_vec <- bb_col(mapping, data)
+        col_vec <- bb_col(mapping, data, palette = palette)
         params <- modifyList(params, list(col = col_vec))
     }
 
