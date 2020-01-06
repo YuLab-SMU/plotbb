@@ -13,7 +13,7 @@ as.bbplot <- function(fun) {
 }
 
 .bbplot_initial <- function(canvas, data = NULL, mapping = bb_aes()) {
-    structure(list(
+    p <- structure(list(
         canvas = canvas,
         data = data,
         mapping = mapping,
@@ -21,10 +21,13 @@ as.bbplot <- function(fun) {
             list(),
             class = "bbplot_layer_list"),
         theme = list(),
+        env = new.env(),
         labs = list(main = NULL,
                     sub = NULL,
                     xlab = NULL,
                     ylab = NULL),
         panel.first = NULL
     ), class = "bbplot")
+    assign("palette", NULL, envir = p$env)
+    return(p)
 }

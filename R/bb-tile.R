@@ -5,17 +5,18 @@ bb_tile <- function(mapping = NULL, data = NULL, ...) {
 }
 
 
-ly_tile <- function(plot, mapping = NULL, data = NULL, ..., palette = NULL) {
+ly_tile <- function(plot, mapping = NULL, data = NULL, ...) {
     data <- bb_data(plot, data)
     mapping <- bb_mapping(plot, mapping)
 
-    layer_name <- "heatmap layer"
-    data$col <- bb_col(mapping, data, palette)
     ly <- function() {
+        data$col <- bb_col(mapping, data,
+                           palette = get("palette", envir = plot$env))
         for (i in 1:nrow(data)) {
             rectangle(data$x[i], data$y[i], col = data$col[i])
         }
     }
+    layer_name <- "heatmap layer"
     plot <- add_layer(plot, ly, layer_name)
     return(plot)
 }

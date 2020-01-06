@@ -6,7 +6,7 @@ bb_lm <- function(mapping = NULL, data = NULL, ...) {
 
 ##' @importFrom graphics segments
 ##' @importFrom graphics par
-ly_lm <- function(plot, mapping = NULL, data = NULL, ..., palette = NULL) {
+ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
     data <- bb_data(plot, data)
     mapping <- bb_mapping(plot, mapping)
 
@@ -27,32 +27,34 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, ..., palette = NULL) {
     params <- list(...)
     grp <- parse_mapping(mapping, 'group', data)
     ugrp <- unique(grp)
-    cols <- NULL
-    if (is.null(params$col) && !is.null(mapping$col)) {
-        cols <- unique(bb_col(mapping, data, palette = palette))
-    }
 
-    d2 <- lapply(ugrp, function(g) {
-        d <- data[grp == g, ]
-        lm_data(formula, d)
-    }) %>% do.call('rbind', .)
-    if (is.null(cols)) {
-        ly <- function() {
+    ly <- function() {
+        cols <- NULL
+        if (is.null(params$col) && !is.null(mapping$col)) {
+            cols <- unique(bb_col(mapping, data,
+                                  palette = get("palette", envir = plot$env)))
+        }
+
+        d2 <- lapply(ugrp, function(g) {
+            d <- data[grp == g, ]
+            lm_data(formula, d)
+        }) %>% do.call('rbind', .)
+
+        if (is.null(cols)) {
             segments(x0 = d2$x0,
                      y0 = d2$y0,
                      x1 = d2$x1,
                      y1 = d2$y1, ...)
-        }
-    } else {
-        d2$col <- cols
-        ly <- function() {
+        } else {
+            d2$col <- cols
             segments(x0 = d2$x0,
                      y0 = d2$y0,
                      x1 = d2$x1,
                      y1 = d2$y1,
                      col = d2$col, ...)
-        }
+        }    
     }
+
     #with_env(ly, lm_env(d2))
     plot <- add_layer(plot, ly, layer_name)
     return(plot)

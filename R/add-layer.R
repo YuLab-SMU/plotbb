@@ -47,6 +47,13 @@ build_layer <- function(mapping, data, ..., layer) {
     modifyList(e1, e2)
 }
 
+##' @method bbplot_add bb_palette
+##' @export
+bbplot_add.bb_palette <- function(object, plot) {
+    assign("palette", object$palette, envir = plot$env)
+    return(plot)
+}
+
 ##' @method bbplot_add formula
 bbplot_add.formula <- function(object, plot) {
     envir <- parent.frame()

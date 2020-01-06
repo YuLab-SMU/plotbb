@@ -1,6 +1,7 @@
 # plotbb 0.0.2
 
-+ `bb_tile` for plotting heatmap (2020-01-06, Mon)
++ `bb_scale_col_palette` (2020-01-06, Mon)
++ `bb_tile` for plotting heatmap 
 + `bb_col` supports both character and numeric variable
 
 # plotbb 0.0.1

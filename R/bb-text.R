@@ -5,7 +5,7 @@ bb_text <- function(mapping = NULL, data = NULL, ...) {
 }
 
 ##' @importFrom graphics text
-ly_text <- function(plot, mapping = NULL, data = NULL, palette = NULL, ...) {
+ly_text <- function(plot, mapping = NULL, data = NULL, ...) {
     data <- bb_data(plot, data)
     mapping <- bb_mapping(plot, mapping)
     x <- data[[xvar(mapping)]]
@@ -20,12 +20,17 @@ ly_text <- function(plot, mapping = NULL, data = NULL, palette = NULL, ...) {
         params <- modifyList(params, list(label = label))
     }
 
-    if (!is.null(mapping$col)) {
-        col_vec <- bb_col(mapping, data, palette = palette)
-        params <- modifyList(params, list(col = col_vec))
-    }
 
-    ly <- function() do.call(text, params)
+    ly <- function() {
+        if (!is.null(mapping$col)) {
+            col_vec <- bb_col(mapping, data,
+                              palette = get("palette", envir = plot$env))
+            params <- modifyList(params, list(col = col_vec))
+        }
+
+        do.call(text, params)
+    }
+    
     add_layer(plot, ly, "text layer")
 }
 

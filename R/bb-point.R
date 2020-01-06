@@ -15,7 +15,7 @@ bb_point <- function(mapping = NULL, data = NULL, position = "identity", ...) {
     build_layer(mapping, data, ...,  layer = ly_point)
 }
 
-ly_point <- function(plot, mapping = NULL, data = NULL, position = "identity", ..., palette = NULL) {
+ly_point <- function(plot, mapping = NULL, data = NULL, position = "identity", ...) {
     position <- match.arg(position, c("identity", "jitter"))
 
     data <- bb_data(plot, data)
@@ -32,12 +32,15 @@ ly_point <- function(plot, mapping = NULL, data = NULL, position = "identity", .
     params <- list(...)
     params <- modifyList(params, list(x = x, y = y))
 
-    if (!is.null(mapping$col)) {
-        col_vec <- bb_col(mapping, data, palette = palette)
-        params <- modifyList(params, list(col = col_vec))
-    }
+    ly <- function() {
+        if (!is.null(mapping$col)) {
+            col_vec <- bb_col(mapping, data,
+                              palette = get("palette", envir = plot$env))
+            params <- modifyList(params, list(col = col_vec))
+        }
 
-    ly <- function() do.call(points, params)
+        do.call(points, params)
+    }
     add_layer(plot, ly, "point layer")
 }
 
