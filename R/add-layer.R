@@ -30,6 +30,15 @@ add_layer <- function(plot, layer, layer_name = "customized layer") {
     return(plot)
 }
 
+build_layer <- function(mapping, data, ..., layer) {
+    structure(list(mapping = mapping,
+                   data = data,
+                   params = list(...),
+                   layer = layer
+                   ),
+              class = "bb_layer")
+}
+
 ##' @method <= bb_theme
 ##' @importFrom methods is
 ##' @export

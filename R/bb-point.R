@@ -12,13 +12,7 @@
 ##' @export
 ##' @author Guangchuang Yu
 bb_point <- function(mapping = NULL, data = NULL, position = "identity", ...) {
-    structure(list(mapping = mapping,
-                   data = data,
-                   position = position,
-                   params = list(...),
-                   layer = ly_point
-                   ),
-              class = "bb_layer")
+    build_layer(mapping, data, ...,  layer = ly_point)
 }
 
 ly_point <- function(plot, mapping = NULL, data = NULL, position = "identity", ...) {

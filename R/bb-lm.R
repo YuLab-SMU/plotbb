@@ -1,12 +1,7 @@
 ##' @rdname layer
 ##' @export
 bb_lm <- function(mapping = NULL, data = NULL, ...) {
-    structure(list(mapping = mapping,
-                   data = data,
-                   params = list(...),
-                   layer = ly_lm
-                   ),
-              class = "bb_layer")
+    build_layer(mapping, data, ...,  layer = ly_lm)
 }
 
 ##' @importFrom graphics segments

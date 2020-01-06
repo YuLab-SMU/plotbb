@@ -1,3 +1,5 @@
 Makefile
 README.Rmd
 README_files
+.vscode
+CONDUCT.md

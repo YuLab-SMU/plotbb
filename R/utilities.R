@@ -56,7 +56,8 @@ parse_mapping <- function(mapping, name, data) {
 bb_col <- function(mapping, data) {
     col_var <- parse_mapping(mapping, 'col', data)
     if (is.numeric(col_var)) {
-        stop("not supported yet")
+        f <- scales::col_numeric("viridis", col_var)
+        col_vec <- f(col_var)
     } else {
         ucol <- sort(unique(col_var))
         cols <- colorspace::rainbow_hcl(length(ucol))
