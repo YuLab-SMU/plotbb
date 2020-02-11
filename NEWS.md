@@ -1,3 +1,7 @@
+# plotbb 0.0.3
+
++ `set_bb_theme` and `unset_bb_theme` (2020-02-11, Tue)
+
 # plotbb 0.0.2
 
 + `bb_scale_col_palette` (2020-01-06, Mon)

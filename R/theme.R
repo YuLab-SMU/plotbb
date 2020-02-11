@@ -1,3 +1,38 @@
+##' set bb_theme
+##' 
+##' setting bb_theme for ordinary base plot command. It internally use par to set global graphic parameters. 
+##' Users need to explictely call unset_bb_theme() to restore original setting.
+##' @title set_bb_theme
+##' @param theme bb_theme
+##' @return NULL
+##' @export
+##' @author Guangchuang Yu
+set_bb_theme <- function(theme) {
+    not_set <- is.null(getOption("bb_old_par"))
+    if (not_set) {
+        old.par <- par(no.readonly=TRUE) #, new = TRUE)
+        options(bb_old_par = old.par)
+    }
+    if (is(theme, "function")) theme <- theme()
+    par(theme, no.readonly = TRUE)
+}
+
+##' unset bb_theme
+##' 
+##' remove all the themes by set_bb_theme
+##' @title unset_bb_theme
+##' @return NULL
+##' @export
+##' @author Guangchuang Yu
+unset_bb_theme <- function() {
+    old.par <- getOption("bb_old_par")
+    if (!is.null(old.par)) {
+        suppressWarnings(par(old.par, no.readonly = TRUE))
+    }
+    invisible()
+}
+
+
 ##' bbplot theme
 ##'
 ##' setting visual details of bbplot
@@ -18,6 +53,8 @@ bb_theme <- function(...) {
     )
     structure(params, class = "bb_theme")
 }
+
+
 
 ##' @method bbplot_add bb_theme
 ##' @export
