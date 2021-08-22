@@ -2,20 +2,20 @@
 
 # plotbb: Grammar of Graphics for base plot
 
-Visit <https://guangchuangyu.github.io/pkgdocs/plotbb.html> for details.
+Visit <https://yulab-smu.top/pkgdocs/plotbb.html> for details.
 
-## :writing\_hand: Author
+## :writing_hand: Author
 
 Guangchuang YU
 
 School of Basic Medical Sciences, Southern Medical University
 
-<https://guangchuangyu.github.io>
+<https://yulab-smu.top>
 
 [![saythanks](https://img.shields.io/badge/say-thanks-ff69b4.svg)](https://saythanks.io/to/GuangchuangYu)
 [![](https://img.shields.io/badge/follow%20me%20on-WeChat-green.svg)](https://guangchuangyu.github.io/blog_images/biobabble.jpg)
 
-## :arrow\_double\_down: Installation
+## :arrow_double_down: Installation
 
 Get the development version from github:
 
@@ -23,8 +23,8 @@ Get the development version from github:
 remotes::install_github("YuLab-SMU/plotbb")
 ```
 
-## :sparkling\_heart: Contributing
+## :sparkling_heart: Contributing
 
-We welcome any contributions\! By participating in this project you
-agree to abide by the terms outlined in the [Contributor Code of
+We welcome any contributions! By participating in this project you agree
+to abide by the terms outlined in the [Contributor Code of
 Conduct](CONDUCT.md).

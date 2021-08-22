@@ -10,6 +10,10 @@
 ##' @return A modified bbplot object
 ##' @importFrom graphics points
 ##' @export
+##' @examples
+##' library(plotbb)
+##' p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl))) +
+##'   bb_point() + bb_lm(bb_aes(group=cyl), lwd=2)
 ##' @author Guangchuang Yu
 bb_point <- function(mapping = NULL, data = NULL, position = "identity", ...) {
     build_layer(mapping, data, ...,  layer = ly_point)

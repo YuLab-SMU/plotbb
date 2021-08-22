@@ -33,6 +33,11 @@ layer
 \details{
 bbplot layers
 }
+\examples{
+library(plotbb)
+p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl))) +
+  bb_point() + bb_lm(bb_aes(group=cyl), lwd=2)
+}
 \author{
 Guangchuang Yu
 }

@@ -1,6 +1,6 @@
 Package: plotbb
 Title: Grammar of Graphics for 'base' Plot
-Version: 0.0.3
+Version: 0.0.4
 Authors@R: c(
 	   person("Guangchuang", "Yu",     email = "guangchuangyu@gmail.com", role = c("aut", "cre", "cph"), comment = c(ORCID = "0000-0002-6485-8781"))
      )

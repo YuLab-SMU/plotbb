@@ -16,6 +16,11 @@ set bb_theme
 setting bb_theme for ordinary base plot command. It internally use par to set global graphic parameters. 
 Users need to explictely call unset_bb_theme() to restore original setting.
 }
+\examples{
+library(plotbb)
+p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl))) + bb_point(pch=19)
+p + bb_theme_expand() + bb_theme_grey() 
+}
 \author{
 Guangchuang Yu
 }

@@ -1,3 +1,7 @@
+# plotbb 0.0.4
+
++ add examples and prepare for submitting to cran (2021-08-22, Sun)
+
 # plotbb 0.0.3
 
 + `set_bb_theme` and `unset_bb_theme` (2020-02-11, Tue)

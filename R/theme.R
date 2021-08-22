@@ -6,6 +6,10 @@
 ##' @param theme bb_theme
 ##' @return NULL
 ##' @export
+##' @examples
+##' library(plotbb)
+##' p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl))) + bb_point(pch=19)
+##' p + bb_theme_expand() + bb_theme_grey() 
 ##' @author Guangchuang Yu
 set_bb_theme <- function(theme) {
     not_set <- is.null(getOption("bb_old_par"))

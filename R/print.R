@@ -6,7 +6,7 @@ print.bbplot <- function(x, ...) {
         on.exit(suppressWarnings(par(old.par, no.readonly = TRUE)))
         par(x$theme, no.readonly = TRUE)
     }
-    .bbplot <- get(".bbplot")
+    .bbplot <- get_plotbb_env()
     last_plot <- .bbplot$.last_plot
 
     if (!is.null(last_plot) && length(last_plot$theme))

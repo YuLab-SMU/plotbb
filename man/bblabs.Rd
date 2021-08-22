@@ -36,6 +36,13 @@ change labels for bbplot
 \details{
 setting one or several of 'title', 'sub', 'xlab', and 'ylab'
 }
+\examples{
+library(plotbb)
+p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl))) + bb_point(pch=19)
+p + bb_labs(title = "hello", sub = "just for demo",
+            xlab="this is xlab", ylab = "this is ylab") +
+    bb_title("hello world") # last one rules
+}
 \author{
 Guangchuang Yu
 }

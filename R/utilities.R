@@ -1,3 +1,8 @@
+get_plotbb_env <- function() {
+    if(!exists(".bbplot")) .plotbb_env_initial()
+    get(".bbplot")
+}
+
 with_env <- function(f, e=parent.frame()) {
     stopifnot(is.function(f))
     environment(f) <- e

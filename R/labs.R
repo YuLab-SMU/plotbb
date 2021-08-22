@@ -7,9 +7,15 @@
 ##' @param sub sub
 ##' @param xlab xlab
 ##' @param ylab ylab
+##' @return A modified bbplot object 
 ##' @importFrom graphics title
 ##' @export
-##' @return A modified bbplot object 
+##' @examples
+##' library(plotbb)
+##' p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl))) + bb_point(pch=19)
+##' p + bb_labs(title = "hello", sub = "just for demo",
+##'             xlab="this is xlab", ylab = "this is ylab") +
+##'     bb_title("hello world") # last one rules
 ##' @author Guangchuang Yu
 bb_labs <- function(title = NULL, sub = NULL, xlab = NULL, ylab = NULL) {
     labs <- list(main = title,
