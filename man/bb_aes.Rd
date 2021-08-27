@@ -13,6 +13,9 @@ bb_aes(x, y, ...)
 
 \item{...}{other mappings}
 }
+\value{
+enquo expression describing variables mapping to aesthetic attributes
+}
 \description{
 aesthetic mapping
 }

@@ -6,6 +6,9 @@
 \usage{
 unset_bb_theme()
 }
+\value{
+unset theme (i.e., restore par setting)
+}
 \description{
 unset bb_theme
 }

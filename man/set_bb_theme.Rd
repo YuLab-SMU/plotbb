@@ -9,6 +9,9 @@ set_bb_theme(theme)
 \arguments{
 \item{theme}{bb_theme}
 }
+\value{
+setting selected theme as default (has side effect and will affect other base plot)
+}
 \description{
 set bb_theme
 }
@@ -18,8 +21,8 @@ Users need to explictely call unset_bb_theme() to restore original setting.
 }
 \examples{
 library(plotbb)
-p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl))) + bb_point(pch=19)
-p + bb_theme_expand() + bb_theme_grey() 
+set_bb_theme(bb_theme_deepblue)
+bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl))) + bb_point(pch=19)
 }
 \author{
 Guangchuang Yu

@@ -1,3 +1,7 @@
+# plotbb 0.0.5
+
++ add more details in Description text and document return values of `bb_aes`, `set_bb_theme` and `unset_bb_theme` (2021-08-27, Fri)
+
 # plotbb 0.0.4
 
 + add examples and prepare for submitting to cran (2021-08-22, Sun)

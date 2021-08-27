@@ -7,6 +7,7 @@
 ##' @param x x variable
 ##' @param y y variable
 ##' @param ... other mappings
+##' @return enquo expression describing variables mapping to aesthetic attributes 
 ##' @importFrom rlang enquos
 ##' @export
 ##' @author Guangchuang Yu
