@@ -10,8 +10,7 @@ ly_tile <- function(plot, mapping = NULL, data = NULL, ...) {
     mapping <- bb_mapping(plot, mapping)
 
     ly <- function() {
-        data$col <- bb_col(mapping, data,
-                           palette = get("palette", envir = plot$env))
+        data$col <- bb_col(mapping, data, plot = plot)
         for (i in 1:nrow(data)) {
             rectangle(data$x[i], data$y[i], col = data$col[i])
         }

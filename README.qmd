@@ -1,0 +1,42 @@
+
+---
+title: "plotbb: Grammar of Graphics for base plot"
+format: gfm
+---
+
+<!-- README.md is generated from README.qmd. Please edit that file -->
+
+```{r comment="", echo=FALSE, results='asis'}
+cat(packageDescription("aplot")$Description)
+```
+
+
+
+## :writing_hand: Author
+
+Guangchuang YU
+
+School of Basic Medical Sciences, Southern Medical University
+
+<https://yulab-smu.top>
+
+
+## :arrow_double_down: Installation
+
+Get the released version from CRAN:
+
+```r
+install.packages("plotbb")
+```
+
+Or the development version from github:
+
+```r
+remotes::install_github("YuLab-SMU/plotbb")
+```
+
+## :sparkling_heart: Contributing
+
+We welcome any contributions! By participating in this project you agree to
+abide by the terms outlined in the [Contributor Code of Conduct](CONDUCT.md).
+

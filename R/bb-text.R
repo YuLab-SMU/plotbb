@@ -8,23 +8,22 @@ bb_text <- function(mapping = NULL, data = NULL, ...) {
 ly_text <- function(plot, mapping = NULL, data = NULL, ...) {
     data <- bb_data(plot, data)
     mapping <- bb_mapping(plot, mapping)
-    x <- data[[xvar(mapping)]]
-    y <- data[[yvar(mapping)]]
+    xy <- bb_eval_xy(mapping, data)
+    x <- xy$x
+    y <- xy$y
     
     params <- list(...)
     params <- modifyList(params, list(x = x, y = y))
 
-    lv <- get_mapping(mapping, 'label')
-    if (lv != "NULL") {
-        label <- data[[lv]]
+    label <- eval_mapping(mapping, 'label', data)
+    if (!is.null(label) && is.null(params$label) && is.null(params$labels)) {
         params <- modifyList(params, list(label = label))
     }
 
 
     ly <- function() {
         if (!is.null(mapping$col) && is.null(params$col)) {
-            col_vec <- bb_col(mapping, data,
-                              palette = get("palette", envir = plot$env))
+            col_vec <- bb_col(mapping, data, plot = plot)
             params <- modifyList(params, list(col = col_vec))
         }
 

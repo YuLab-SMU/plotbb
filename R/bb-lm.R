@@ -14,6 +14,7 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
     formula <- stats::as.formula(paste(yvar(mapping), '~', xvar(mapping)))
     if (is.null(mapping$group)) {
         d2 <- lm_data(formula, data)
+        if (is.null(d2)) return(plot)
         ly <- function() {
             segments(x0 = d2$x0,
                      y0 = d2$y0,
@@ -25,20 +26,27 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
     }
 
     params <- list(...)
-    grp <- parse_mapping(mapping, 'group', data)
+    grp <- eval_mapping(mapping, 'group', data)
     ugrp <- unique(grp)
 
     ly <- function() {
         cols <- NULL
         if (is.null(params$col) && !is.null(mapping$col)) {
-            cols <- unique(bb_col(mapping, data,
-                                  palette = get("palette", envir = plot$env)))
+            col_vec <- bb_col(mapping, data, plot = plot)
+            if (!is.null(col_vec)) {
+                col_map <- tapply(col_vec, as.character(grp), function(z) z[[1]])
+                cols <- unname(col_map[as.character(ugrp)])
+            }
         }
 
-        d2 <- lapply(ugrp, function(g) {
+        d2_list <- lapply(ugrp, function(g) {
             d <- data[grp == g, ]
             lm_data(formula, d)
-        }) %>% do.call('rbind', .)
+        })
+        keep <- !vapply(d2_list, is.null, logical(1))
+        if (!any(keep)) return(invisible(NULL))
+        d2 <- do.call('rbind', d2_list[keep])
+        if (!is.null(cols)) cols <- cols[keep]
 
         if (is.null(cols)) {
             segments(x0 = d2$x0,
@@ -63,12 +71,25 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
 
 lm_data <- function(formula, data) {
     s <- stats::lm(formula, data = data)
-    x <- as.character(formula)[3]
-    
-    x0 <- min(data[[x]])
-    x1 <- max(data[[x]])
-    y0 <- s$coefficients[1] + x0 * s$coefficients[2]
-    y1 <- s$coefficients[1] + x1 * s$coefficients[2]
+    term_labels <- attr(stats::terms(s), "term.labels")
+    if (length(term_labels) != 1) return(NULL)
+
+    mf <- stats::model.frame(s)
+    x_name <- term_labels[[1]]
+    if (!x_name %in% names(mf)) return(NULL)
+
+    x <- mf[[x_name]]
+    if (!is.numeric(x)) return(NULL)
+    x <- x[is.finite(x)]
+    if (length(x) == 0) return(NULL)
+
+    co <- stats::coef(s)
+    if (length(co) < 2 || any(!is.finite(co[1:2]))) return(NULL)
+
+    x0 <- min(x)
+    x1 <- max(x)
+    y0 <- co[[1]] + x0 * co[[2]]
+    y1 <- co[[1]] + x1 * co[[2]]
     data.frame(x0 = x0, x1 = x1,
                y0 = y0, y1 = y1)
 }

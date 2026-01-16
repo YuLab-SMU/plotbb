@@ -2,12 +2,24 @@
 % Please edit documentation in R/scale.R
 \name{bb_scale_col_palette}
 \alias{bb_scale_col_palette}
+\alias{bb_scale_col_manual}
+\alias{bb_scale_col_gradient}
 \title{bb_scale_col_palette}
 \usage{
 bb_scale_col_palette(palette = NULL)
+
+bb_scale_col_manual(values)
+
+bb_scale_col_gradient(low = "#132B43", high = "#56B1F7")
 }
 \arguments{
 \item{palette}{color palette}
+
+\item{values}{colors for discrete scale.}
+
+\item{low}{low color for continuous scale.}
+
+\item{high}{high color for continuous scale.}
 }
 \value{
 A modified bbplot object

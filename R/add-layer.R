@@ -2,6 +2,7 @@
 ##' @export
 `+.bbplot` <- function(e1, e2) {
     if (is.null(e2)) return(e1)
+    e1$adds[[length(e1$adds) + 1]] <- e2
     bbplot_add(e2, e1)
 }
 
@@ -51,10 +52,31 @@ build_layer <- function(mapping, data, ..., layer) {
 ##' @export
 bbplot_add.bb_palette <- function(object, plot) {
     assign("palette", object$palette, envir = plot$env)
+    if (is.null(plot$scales)) plot$scales <- list(col = NULL, pch = NULL, lty = NULL, cex = NULL)
+    if (!exists("scales", envir = plot$env, inherits = FALSE)) {
+        assign("scales", list(col = NULL, pch = NULL, lty = NULL, cex = NULL), envir = plot$env)
+    }
+
+    if (!is.null(plot$data) && !is.null(plot$mapping$col)) {
+        col_var <- eval_mapping(plot$mapping, "col", plot$data)
+        if (!is.null(col_var)) {
+            if (is.numeric(col_var)) {
+                object$domain <- range(col_var, na.rm = TRUE)
+            } else {
+                object$domain <- bb_discrete_levels(col_var)
+            }
+        }
+    }
+
+    plot$scales$col <- object
+    scales <- get("scales", envir = plot$env, inherits = FALSE)
+    scales$col <- object
+    assign("scales", scales, envir = plot$env)
     return(plot)
 }
 
 ##' @method bbplot_add formula
+##' @export
 bbplot_add.formula <- function(object, plot) {
     envir <- parent.frame()
     layer <- plot_fun(object)
@@ -63,8 +85,10 @@ bbplot_add.formula <- function(object, plot) {
 }
 
 ##' @method bbplot_add expression
+##' @export
 bbplot_add.expression <- bbplot_add.formula
 
 ##' @method bbplot_add function
+##' @export
 bbplot_add.function <- bbplot_add.formula
 

@@ -16,17 +16,24 @@
 ##' p + bb_grid(col='grey50', lty='dashed') + bb_point(pch=19)
 ##' @author Guangchuang Yu
 bbplot <- function(data, mapping = bb_aes()) {
-    xx <- xvar(mapping)
-    yy <- yvar(mapping)
-
-    p <- function() {
-        plot(data[[xx]], data[[yy]],
-             type = 'n',
-             xlab = "", 
-             ylab = "")
+    p <- function(xlim = NULL, ylim = NULL, ...) {
+        xy <- bb_eval_xy(mapping, data)
+        args <- list(
+            xy$x %||% NA,
+            xy$y %||% NA,
+            type = "n",
+            xlab = "",
+            ylab = ""
+        )
+        if (!is.null(xlim)) args$xlim <- xlim
+        if (!is.null(ylim)) args$ylim <- ylim
+        do.call(graphics::plot, c(args, list(...)))
     }
     
     .bbplot_initial(p, data, mapping) +
-        bb_labs(xlab = xx, ylab = yy)
+        bb_labs(
+            xlab = if (!is.null(mapping$x)) rlang::as_label(mapping$x) else NULL,
+            ylab = if (!is.null(mapping$y)) rlang::as_label(mapping$y) else NULL
+        )
 }
 

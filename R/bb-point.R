@@ -20,17 +20,25 @@ bb_point <- function(mapping = NULL, data = NULL, position = "identity", ...) {
 }
 
 ly_point <- function(plot, mapping = NULL, data = NULL, position = "identity", ...) {
-    position <- match.arg(position, c("identity", "jitter"))
+    if (inherits(position, "bb_position")) {
+        pos <- position$type %||% "identity"
+    } else {
+        pos <- match.arg(position, c("identity", "jitter"))
+        position <- structure(list(type = pos), class = "bb_position")
+    }
 
     data <- bb_data(plot, data)
     mapping <- bb_mapping(plot, mapping)
 
-    x <- data[[xvar(mapping)]]
-    y <- data[[yvar(mapping)]]
+    xy <- bb_eval_xy(mapping, data)
+    x <- xy$x
+    y <- xy$y
 
-    if (position == "jitter") {
-        x <- jitter(x)
-        y <- jitter(y)
+    if (identical(position$type, "jitter")) {
+        w <- position$width %||% NULL
+        h <- position$height %||% NULL
+        x <- jitter(x, amount = w)
+        y <- jitter(y, amount = h)
     }
 
     params <- list(...)
@@ -38,9 +46,18 @@ ly_point <- function(plot, mapping = NULL, data = NULL, position = "identity", .
 
     ly <- function() {
         if (!is.null(mapping$col)) {
-            col_vec <- bb_col(mapping, data,
-                              palette = get("palette", envir = plot$env))
+            col_vec <- bb_col(mapping, data, plot = plot)
             params <- modifyList(params, list(col = col_vec))
+        }
+
+        if (!is.null(mapping$pch) && is.null(params$pch)) {
+            pch_vec <- bb_pch(mapping, data, plot = plot)
+            params <- modifyList(params, list(pch = pch_vec))
+        }
+
+        if (!is.null(mapping$cex) && is.null(params$cex)) {
+            cex_vec <- bb_cex(mapping, data, plot = plot)
+            params <- modifyList(params, list(cex = cex_vec))
         }
 
         do.call(points, params)
@@ -52,11 +69,10 @@ ly_point <- function(plot, mapping = NULL, data = NULL, position = "identity", .
 ##' @export
 bbplot_add.bb_layer <- function(object, plot) {
     ly <- object$layer
-    params <- c(object, unlist(object$params))
-    params <- params[names(params) != 'params']
-    params <- params[names(params) != 'layer']
-    params$plot <- plot
 
-    do.call(ly, params)
+    params_list <- object$params %||% list()
+    object$params <- NULL
+    object$layer <- NULL
+
+    do.call(ly, c(list(plot = plot), object, params_list))
 }
-

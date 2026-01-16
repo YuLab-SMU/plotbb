@@ -4,29 +4,26 @@ PKGSRC  := $(shell basename `pwd`)
 
 all: rd check clean
 
-alldocs: rd readme mkdocs
-
 rd:
 	Rscript -e 'roxygen2::roxygenise(".")'
 
 readme:
-	Rscript -e 'rmarkdown::render("README.Rmd")'
-
-readme2:
-	Rscript -e 'rmarkdown::render("README.Rmd", "html_document")'
+	quarto render README.qmd
 
 build:
-	cd ..;\
-	R CMD build $(PKGSRC)
+	#cd ..;\
+	#R CMD build $(PKGSRC)
+	Rscript -e 'devtools::build()'
 
 build2:
 	cd ..;\
 	R CMD build --no-build-vignettes $(PKGSRC)
 
 install:
-	cd ..;\
-	R CMD INSTALL $(PKGNAME)_$(PKGVERS).tar.gz
-
+	#cd ..;\
+	#R CMD INSTALL $(PKGNAME)_$(PKGVERS).tar.gz
+	Rscript -e 'devtools::install()'
+	
 check: build
 	cd ..;\
 	Rscript -e 'rcmdcheck::rcmdcheck("$(PKGNAME)_$(PKGVERS).tar.gz", args="--as-cran")'

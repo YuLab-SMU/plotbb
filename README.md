@@ -1,8 +1,15 @@
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
 # plotbb: Grammar of Graphics for base plot
 
-Visit <https://yulab-smu.top/pkgdocs/plotbb.html> for details.
+
+<!-- README.md is generated from README.qmd. Please edit that file -->
+
+For many times, we are not just aligning plots as what ‘cowplot’ and
+‘patchwork’ did. Users would like to align associated information that
+requires axes to be exactly matched in subplots, e.g. hierarchical
+clustering with a heatmap. Inspired by the ‘Method 2’ in ‘ggtree’ (G Yu
+(2018) <doi:10.1093/molbev/msy194>), ‘aplot’ provides utilities to
+aligns associated subplots to a main plot at different sides (left,
+right, top and bottom) with axes exactly matched.
 
 ## :writing_hand: Author
 
@@ -12,12 +19,15 @@ School of Basic Medical Sciences, Southern Medical University
 
 <https://yulab-smu.top>
 
-[![saythanks](https://img.shields.io/badge/say-thanks-ff69b4.svg)](https://saythanks.io/to/GuangchuangYu)
-[![](https://img.shields.io/badge/follow%20me%20on-WeChat-green.svg)](https://guangchuangyu.github.io/blog_images/biobabble.jpg)
-
 ## :arrow_double_down: Installation
 
-Get the development version from github:
+Get the released version from CRAN:
+
+``` r
+install.packages("plotbb")
+```
+
+Or the development version from github:
 
 ``` r
 remotes::install_github("YuLab-SMU/plotbb")

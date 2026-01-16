@@ -1,3 +1,14 @@
+# plotbb 0.1.0
+
++ `bb_line`, `bb_segment`, `bb_errorbar` and `bb_bar` (2026-01-15, Thu)
++ fix `bb_bar(stat = "count")` order to respect factor levels
++ evaluate aesthetic mappings with `rlang::eval_tidy` for better expression support
++ `bb_legend` supports both discrete and continuous color mapping
++ `bb_scale_col_manual` and `bb_scale_col_gradient`
++ `bb_facet_wrap` supports `scales = "free"` (`free_x`/`free_y`)
++ migrate vignette to Quarto and build with `VignetteBuilder: quarto`
++ fix roxygen exports for S3 methods and public functions
+
 # plotbb 0.0.5
 
 + add more details in Description text and document return values of `bb_aes`, `set_bb_theme` and `unset_bb_theme` (2021-08-27, Fri)

@@ -17,6 +17,7 @@ as.bbplot <- function(fun) {
         canvas = canvas,
         data = data,
         mapping = mapping,
+        scales = list(col = NULL),
         layer = structure(
             list(),
             class = "bbplot_layer_list"),
@@ -26,8 +27,11 @@ as.bbplot <- function(fun) {
                     sub = NULL,
                     xlab = NULL,
                     ylab = NULL),
-        panel.first = NULL
+        panel.first = NULL,
+        facet = NULL,
+        adds = list()
     ), class = "bbplot")
     assign("palette", NULL, envir = p$env)
+    assign("scales", list(col = NULL), envir = p$env)
     return(p)
 }
