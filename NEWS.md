@@ -1,10 +1,18 @@
+# plotbb 0.1.1
+
++ `bb_boxplot` and `bb_hist` (2026-01-30, Fri)
++ `bb_signif` supports `comparisons` for significance annotations
++ `bb_theme_bw` and `bb_theme_minimal`
++ add unit tests for `bb_bar`, `bb_boxplot`, `bb_hist` and `bb_signif`
+
 # plotbb 0.1.0
 
-+ `bb_line`, `bb_segment`, `bb_errorbar` and `bb_bar` (2026-01-15, Thu)
++ `bb_line`, `bb_segment`, `bb_errorbar`, and `bb_bar` (2026-01-15, Thu)
 + fix `bb_bar(stat = "count")` order to respect factor levels
 + evaluate aesthetic mappings with `rlang::eval_tidy` for better expression support
 + `bb_legend` supports both discrete and continuous color mapping
 + `bb_scale_col_manual` and `bb_scale_col_gradient`
++ `bb_scale_pch_manual`, `bb_scale_lty_manual`, `bb_scale_cex_manual` and `bb_scale_cex_continuous`
 + `bb_facet_wrap` supports `scales = "free"` (`free_x`/`free_y`)
 + migrate vignette to Quarto and build with `VignetteBuilder: quarto`
 + fix roxygen exports for S3 methods and public functions

@@ -7,7 +7,7 @@ format: gfm
 <!-- README.md is generated from README.qmd. Please edit that file -->
 
 ```{r comment="", echo=FALSE, results='asis'}
-cat(packageDescription("aplot")$Description)
+cat(packageDescription("plotbb")$Description)
 ```
 
 

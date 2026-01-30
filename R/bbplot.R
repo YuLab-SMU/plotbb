@@ -18,6 +18,21 @@
 bbplot <- function(data, mapping = bb_aes()) {
     p <- function(xlim = NULL, ylim = NULL, ...) {
         xy <- bb_eval_xy(mapping, data)
+        
+        if (!is.null(xlim) && !is.null(ylim)) {
+            args <- list(
+                x = NA,
+                y = NA,
+                type = "n",
+                xlab = "",
+                ylab = "",
+                xlim = xlim,
+                ylim = ylim
+            )
+            do.call(graphics::plot, c(args, list(...)))
+            return(invisible(NULL))
+        }
+
         args <- list(
             xy$x %||% NA,
             xy$y %||% NA,

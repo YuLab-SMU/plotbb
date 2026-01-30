@@ -112,6 +112,16 @@ bb_discrete_levels <- function(x) {
 bb_range_union <- function(rng, x) {
     if (is.null(x)) return(rng)
     if (length(x) == 0) return(rng)
+    
+    if (is.factor(x)) {
+        x <- as.integer(x)
+    }
+    if (is.character(x)) {
+        # Attempt to convert character to integer based on sorted unique levels (simple assumption)
+        # This matches how we might treat discrete variables if no strict scale is enforced yet
+        x <- as.integer(factor(x))
+    }
+
     ok <- tryCatch(is.finite(x), error = function(e) NULL)
     if (is.null(ok)) return(rng)
     x <- x[ok]
@@ -238,11 +248,119 @@ bb_layer_limits <- function(layer_obj, plot) {
         return(list(xlim = xlim, ylim = ylim))
     }
 
+    if (identical(ly, ly_boxplot)) {
+        x <- bb_eval_or_fallback(mapping, data, "x", NULL)
+        y <- bb_eval_or_fallback(mapping, data, "y", NULL)
+        width <- layer_obj$params$boxwex %||% 0.8
+        
+        xlim <- NULL
+        ylim <- NULL
+        if (!is.null(x)) {
+            if (is.factor(x) || is.character(x)) {
+                xi <- as.integer(as.factor(x))
+                xlim <- bb_range_union(xlim, xi - width/2)
+                xlim <- bb_range_union(xlim, xi + width/2)
+            } else {
+                 xlim <- bb_range_union(xlim, x - width/2)
+                 xlim <- bb_range_union(xlim, x + width/2)
+            }
+        } else {
+            xlim <- c(1 - width/2, 1 + width/2)
+        }
+        ylim <- bb_range_union(ylim, y)
+        return(list(xlim = xlim, ylim = ylim))
+    }
+
+    if (identical(ly, ly_hist)) {
+        x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
+        h <- graphics::hist(x, plot = FALSE)
+        xlim <- bb_range_union(xlim, h$breaks)
+        ylim <- bb_range_union(ylim, c(0, h$counts)) # Assuming counts for now
+        return(list(xlim = xlim, ylim = ylim))
+    }
+
+    if (identical(ly, ly_signif)) {
+        tip_length <- layer_obj$params$tip_length %||% 0.03
+        text_gap <- layer_obj$params$text_gap %||% 0.01
+        step_increase <- layer_obj$params$step_increase %||% 0.05
+
+        comparisons <- layer_obj$params$comparisons %||% NULL
+        y_position_param <- layer_obj$params$y_position %||% NULL
+
+        if (!is.null(comparisons)) {
+            x_raw <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
+            y_raw <- bb_eval_or_fallback(mapping, data, "y", yvar(mapping))
+            if (is.null(x_raw) || is.null(y_raw)) return(NULL)
+
+            if (!is.list(comparisons)) comparisons <- list(comparisons)
+            ncomp <- length(comparisons)
+            if (ncomp == 0) return(NULL)
+
+            y_span <- diff(range(y_raw, na.rm = TRUE))
+            if (!is.finite(y_span) || y_span == 0) y_span <- 1
+
+            if (is.null(y_position_param)) {
+                y_top <- max(y_raw, na.rm = TRUE)
+                y <- y_top + y_span * step_increase * seq_len(ncomp)
+            } else if (length(y_position_param) == 1) {
+                y <- rep(y_position_param, ncomp)
+            } else {
+                y <- y_position_param
+            }
+
+            if (is.numeric(x_raw)) {
+                lev <- NULL
+                get_pos <- function(x) as.numeric(x)
+            } else {
+                lev <- bb_discrete_levels(x_raw)
+                get_pos <- function(x) match(as.character(x), lev)
+            }
+
+            xmin <- numeric(0)
+            xmax <- numeric(0)
+            for (i in seq_len(ncomp)) {
+                comp <- comparisons[[i]]
+                if (length(comp) < 2) next
+                p1 <- get_pos(comp[[1]])
+                p2 <- get_pos(comp[[2]])
+                if (is.na(p1) || is.na(p2)) next
+                xmin <- c(xmin, min(p1, p2))
+                xmax <- c(xmax, max(p1, p2))
+            }
+            if (!length(xmin)) return(NULL)
+
+            xlim <- bb_range_union(xlim, xmin)
+            xlim <- bb_range_union(xlim, xmax)
+            ylim <- bb_range_union(ylim, y - y_span * tip_length)
+            ylim <- bb_range_union(ylim, y + y_span * text_gap)
+            return(list(xlim = xlim, ylim = ylim))
+        }
+
+        xmin <- bb_eval_or_fallback(mapping, data, "xmin", NULL)
+        xmax <- bb_eval_or_fallback(mapping, data, "xmax", NULL)
+        y <- bb_eval_or_fallback(mapping, data, "y_position", NULL) %||% bb_eval_or_fallback(mapping, data, "y", NULL)
+        if (is.null(xmin) || is.null(xmax) || is.null(y)) return(NULL)
+
+        xlim <- bb_range_union(xlim, xmin)
+        xlim <- bb_range_union(xlim, xmax)
+        y_span <- diff(range(y, na.rm = TRUE))
+        if (!is.finite(y_span) || y_span == 0) y_span <- 1
+        ylim <- bb_range_union(ylim, y - y_span * tip_length)
+        ylim <- bb_range_union(ylim, y + y_span * text_gap)
+        return(list(xlim = xlim, ylim = ylim))
+    }
+
     xy <- bb_eval_xy(mapping, data)
     xlim <- bb_range_union(xlim, xy$x)
     ylim <- bb_range_union(ylim, xy$y)
     list(xlim = xlim, ylim = ylim)
 }
+
+bb_eval_one <- function(quo, data) {
+    if (is.null(quo)) return(NULL)
+    rlang::eval_tidy(quo, data = data)
+}
+
 
 bb_plot_limits <- function(plot) {
     xlim <- NULL

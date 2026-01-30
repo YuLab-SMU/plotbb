@@ -104,3 +104,27 @@ build_theme <- function(default, ...) {
     ## default is a list of default setting
     do.call(bb_theme, default) <= bb_theme(...)
 }
+
+##' @rdname bb-theme
+##' @export
+bb_theme_bw <- function(...) {
+    bb_theme(
+        bg = "white",
+        fg = "black",
+        col.axis = "black",
+        col.lab = "black"
+    ) <= bb_theme(...)
+}
+
+##' @rdname bb-theme
+##' @export
+bb_theme_minimal <- function(...) {
+    bb_theme(
+        bg = "white",
+        fg = "black",
+        col.axis = "black",
+        col.lab = "black",
+        bty = "n",
+        tck = -0.01
+    ) <= bb_theme(...)
+}

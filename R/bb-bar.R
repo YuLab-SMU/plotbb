@@ -21,8 +21,11 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
         x_chr_all <- as.character(x_raw)
         x_chr <- x_chr_all[!is.na(x_chr_all)]
         if (length(x_chr) == 0) {
-            plot$canvas <- function() {
-                graphics::plot.default(NA, NA, type = "n", xlab = "", ylab = "", xaxt = "n")
+            plot$canvas <- function(xlim = NULL, ylim = NULL) {
+                args <- list(NA, NA, type = "n", xlab = "", ylab = "", xaxt = "n")
+                if (!is.null(xlim)) args$xlim <- xlim
+                if (!is.null(ylim)) args$ylim <- ylim
+                do.call(graphics::plot.default, args)
             }
             ly <- function() {
                 invisible(NULL)
@@ -37,9 +40,11 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
         xpos <- seq_along(tab)
         y <- as.numeric(tab)
 
-        plot$canvas <- function() {
-            xlim <- c(min(xpos - width/2), max(xpos + width/2))
-            ylim <- c(0, max(y, na.rm = TRUE))
+        plot$canvas <- function(xlim = NULL, ylim = NULL) {
+            xlim_default <- c(min(xpos - width/2), max(xpos + width/2))
+            ylim_default <- c(0, max(y, na.rm = TRUE))
+            xlim <- xlim %||% xlim_default
+            ylim <- ylim %||% ylim_default
             graphics::plot.default(NA, NA, type = "n", xlim = xlim, ylim = ylim, xlab = "", ylab = "", xaxt = "n")
             graphics::axis(1, at = xpos, labels = labels)
         }
@@ -85,9 +90,11 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
     y <- y_raw
 
     if (!is.null(labels)) {
-        plot$canvas <- function() {
-            xlim <- c(min(xpos - width/2), max(xpos + width/2))
-            ylim <- range(c(0, y), na.rm = TRUE)
+        plot$canvas <- function(xlim = NULL, ylim = NULL) {
+            xlim_default <- c(min(xpos - width/2), max(xpos + width/2))
+            ylim_default <- range(c(0, y), na.rm = TRUE)
+            xlim <- xlim %||% xlim_default
+            ylim <- ylim %||% ylim_default
             graphics::plot.default(NA, NA, type = "n", xlim = xlim, ylim = ylim, xlab = "", ylab = "", xaxt = "n")
             graphics::axis(1, at = seq_along(labels), labels = labels)
         }

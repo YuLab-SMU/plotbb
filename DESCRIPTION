@@ -1,10 +1,15 @@
 Package: plotbb
 Title: Grammar of Graphics for 'base' Plot
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: c(
 	   person("Guangchuang", "Yu",     email = "guangchuangyu@gmail.com", role = c("aut", "cre", "cph"), comment = c(ORCID = "0000-0002-6485-8781"))
      )
-Description: Proof of concept for implementing grammar of graphics using base plot. The bbplot() function initializes a 'bbplot' object to store input data, aesthetic mapping, a list of layers and theme elements. The object will be rendered as a graphic using base plot command if it is printed.  
+Description: A grammar of graphics framework built on 'base' graphics. It
+  provides a 'bbplot' object and a '+' operator to incrementally compose plots
+  from data, aesthetic mappings and layers, then render them using the base
+  plotting system. The package includes common geometric layers (points, lines,
+  segments, bars, histograms, boxplots and tiles), scales for color and other
+  aesthetics, legends, faceting, themes, and significance annotations.
 Imports:
   graphics,
   magrittr,
@@ -18,7 +23,9 @@ Suggests:
   aplot (>= 0.0.8),
   dplyr,
   ggplotify (>= 0.1.0),
-  quarto
+  quarto,
+  knitr,
+  testthat
 VignetteBuilder: quarto
 ByteCompile: true
 License: Artistic-2.0
