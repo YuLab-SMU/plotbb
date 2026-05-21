@@ -156,14 +156,15 @@ bbplot_add.bb_scale <- function(object, plot) {
 ##' @title bb_legend
 ##' @param position legend position passed to \code{graphics::legend}.
 ##' @param title legend title.
-##' @param aesthetic currently only supports \code{"col"}.
+##' @param aesthetic currently supports \code{"col"}, \code{"fill"}, \code{"pch"}, \code{"lty"}, \code{"cex"}.
 ##' @param pch point shape used in legend.
 ##' @param bty box type passed to \code{graphics::legend}.
+##' @param outside logical, whether to place the legend outside the plotting area.
 ##' @param ... additional parameters passed to \code{graphics::legend}.
 ##' @return A modified bbplot object
 ##' @export
 ##' @author Guangchuang Yu
-bb_legend <- function(position = "topright", title = NULL, aesthetic = "col", pch = 19, bty = "n", ...) {
+bb_legend <- function(position = "topright", title = NULL, aesthetic = "col", pch = 19, bty = "n", outside = FALSE, ...) {
     structure(
         list(
             position = position,
@@ -171,33 +172,32 @@ bb_legend <- function(position = "topright", title = NULL, aesthetic = "col", pc
             aesthetic = aesthetic,
             pch = pch,
             bty = bty,
+            outside = outside,
             params = list(...)
         ),
         class = "bb_legend"
     )
 }
 
-##' @method bbplot_add bb_legend
-##' @export
-bbplot_add.bb_legend <- function(object, plot) {
-    ly <- function() {
+bb_draw_legend <- function(object, plot) {
         mapping <- plot$mapping
         data <- plot$data
         if (is.null(data)) return(invisible(NULL))
 
         aesthetic <- object$aesthetic %||% "col"
-        if (!aesthetic %in% c("col", "pch", "lty", "cex")) return(invisible(NULL))
-
-        map_quo <- mapping[[aesthetic]]
+        if (!aesthetic %in% c("col", "fill", "pch", "lty", "cex")) return(invisible(NULL))
+        
+        # fallback to col if fill is asked but mapping uses col
+        map_quo <- mapping[[aesthetic]] %||% mapping[["col"]]
         if (is.null(map_quo)) return(invisible(NULL))
 
-        aes_var <- eval_mapping(mapping, aesthetic, data)
+        aes_var <- eval_mapping(mapping, aesthetic, data) %||% eval_mapping(mapping, "col", data)
         if (is.null(aes_var)) return(invisible(NULL))
 
         legend_title <- object$title %||% rlang::as_label(map_quo)
 
-        if (identical(aesthetic, "col") && is.numeric(aes_var)) {
-            scale <- plot$scales$col
+        if (aesthetic %in% c("col", "fill") && is.numeric(aes_var)) {
+            scale <- plot$scales[[aesthetic]] %||% plot$scales$col
             if (is.null(scale)) return(invisible(NULL))
 
             dom <- scale$domain %||% range(aes_var, na.rm = TRUE)
@@ -273,22 +273,51 @@ bbplot_add.bb_legend <- function(object, plot) {
         labels <- labels[labels %in% lvl]
         if (length(labels) == 0) return(invisible(NULL))
 
-        if (identical(aesthetic, "col")) {
+        if (aesthetic %in% c("col", "fill")) {
             aes_vec <- bb_col(mapping, data, plot = plot)
+            
+            # Support mapping fill directly if no col map is defined or we explicitly requested fill
+             if (!is.null(mapping$fill)) {
+                  fill_var <- eval_mapping(mapping, "fill", data)
+                  scale_fill <- plot$scales$fill %||% plot$scales$col
+                  if (is.null(scale_fill)) {
+                      scale_fill <- structure(list(palette = NULL, type = "palette"), class = "bb_palette")
+                  }
+                  mapped_cols <- bb_scale_col_map(scale_fill, fill_var)
+                  if (!is.null(mapped_cols)) aes_vec <- mapped_cols
+             }
+            
+            if (is.null(aes_vec)) return(invisible(NULL))
             aes_vec <- aes_vec[keep]
+            
+            if (length(aes_vec) != length(lvl)) return(invisible(NULL))
+            
             aes_map <- tapply(aes_vec, lvl, function(z) z[[1]])
             aes_map <- unname(aes_map[labels])
+            
+            pch_val <- object$pch
+            if (aesthetic == "fill" && pch_val == 19) pch_val <- 15
+            
             args <- c(
                 list(
                     x = object$position,
                     legend = labels,
                     col = aes_map,
-                    pch = object$pch,
+                    pch = pch_val,
                     title = legend_title,
                     bty = object$bty
                 ),
                 object$params
             )
+            
+            if (object$outside) {
+                op <- graphics::par(xpd = TRUE)
+                on.exit(graphics::par(op), add = TRUE)
+                if (is.character(args$x) && args$x %in% c("topright", "right", "bottomright")) {
+                    args$inset <- c(-0.2, 0)
+                }
+            }
+            
             do.call(graphics::legend, args)
             return(invisible(NULL))
         }
@@ -308,6 +337,15 @@ bbplot_add.bb_legend <- function(object, plot) {
                 ),
                 object$params
             )
+            
+            if (object$outside) {
+                op <- graphics::par(xpd = TRUE)
+                on.exit(graphics::par(op), add = TRUE)
+                if (is.character(args$x) && args$x %in% c("topright", "right", "bottomright")) {
+                    args$inset <- c(-0.2, 0)
+                }
+            }
+            
             do.call(graphics::legend, args)
             return(invisible(NULL))
         }
@@ -327,6 +365,15 @@ bbplot_add.bb_legend <- function(object, plot) {
                 ),
                 object$params
             )
+            
+            if (object$outside) {
+                op <- graphics::par(xpd = TRUE)
+                on.exit(graphics::par(op), add = TRUE)
+                if (is.character(args$x) && args$x %in% c("topright", "right", "bottomright")) {
+                    args$inset <- c(-0.2, 0)
+                }
+            }
+            
             do.call(graphics::legend, args)
             return(invisible(NULL))
         }
@@ -346,8 +393,24 @@ bbplot_add.bb_legend <- function(object, plot) {
             ),
             object$params
         )
+        
+        if (object$outside) {
+            op <- graphics::par(xpd = TRUE)
+            on.exit(graphics::par(op), add = TRUE)
+            if (is.character(args$x) && args$x %in% c("topright", "right", "bottomright")) {
+                args$inset <- c(-0.2, 0)
+            }
+        }
+        
         do.call(graphics::legend, args)
         invisible(NULL)
+}
+
+##' @method bbplot_add bb_legend
+##' @export
+bbplot_add.bb_legend <- function(object, plot) {
+    ly <- function() {
+        bb_draw_legend(object, plot)
     }
 
     add_layer(plot, ly, "legend")

@@ -194,11 +194,16 @@ bb_layer_limits <- function(layer_obj, plot) {
     if (identical(ly, ly_lm)) {
         formula <- stats::as.formula(paste(yvar(mapping), "~", xvar(mapping)))
         grp <- eval_mapping(mapping, "group", data)
+        se <- layer_obj$params$se %||% TRUE
+        level <- layer_obj$params$level %||% 0.95
         if (is.null(grp)) {
-            d2 <- lm_data(formula, data)
+            d2 <- lm_data(formula, data, se = se, level = level)
             if (is.null(d2)) return(NULL)
             xlim <- bb_range_union(xlim, c(d2$x0, d2$x1))
             ylim <- bb_range_union(ylim, c(d2$y0, d2$y1))
+            if (se && !is.null(d2$ci)) {
+                ylim <- bb_range_union(ylim, c(d2$ci$lwr, d2$ci$upr))
+            }
             return(list(xlim = xlim, ylim = ylim))
         }
 
@@ -207,10 +212,13 @@ bb_layer_limits <- function(layer_obj, plot) {
         if (!any(keep)) return(NULL)
         for (g in unique(grp_chr[keep])) {
             d <- data[grp_chr == g, , drop = FALSE]
-            d2 <- lm_data(formula, d)
+            d2 <- lm_data(formula, d, se = se, level = level)
             if (is.null(d2)) next
             xlim <- bb_range_union(xlim, c(d2$x0, d2$x1))
             ylim <- bb_range_union(ylim, c(d2$y0, d2$y1))
+            if (se && !is.null(d2$ci)) {
+                ylim <- bb_range_union(ylim, c(d2$ci$lwr, d2$ci$upr))
+            }
         }
         return(list(xlim = xlim, ylim = ylim))
     }
@@ -276,6 +284,29 @@ bb_layer_limits <- function(layer_obj, plot) {
         h <- graphics::hist(x, plot = FALSE)
         xlim <- bb_range_union(xlim, h$breaks)
         ylim <- bb_range_union(ylim, c(0, h$counts)) # Assuming counts for now
+        return(list(xlim = xlim, ylim = ylim))
+    }
+
+    if (identical(ly, ly_density)) {
+        x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
+        if (!is.null(x) && is.numeric(x)) {
+            grp <- eval_mapping(mapping, "col", data) %||% eval_mapping(mapping, "group", data) %||% eval_mapping(mapping, "fill", data)
+            if (is.null(grp)) {
+                d <- stats::density(x, na.rm = TRUE)
+                xlim <- bb_range_union(xlim, d$x)
+                ylim <- bb_range_union(ylim, c(0, d$y))
+            } else {
+                grp_chr <- as.character(grp)
+                for (g in unique(grp_chr[!is.na(grp_chr)])) {
+                    sub_x <- x[grp_chr == g]
+                    if (length(sub_x) >= 2) {
+                        d <- stats::density(sub_x, na.rm = TRUE)
+                        xlim <- bb_range_union(xlim, d$x)
+                        ylim <- bb_range_union(ylim, c(0, d$y))
+                    }
+                }
+            }
+        }
         return(list(xlim = xlim, ylim = ylim))
     }
 

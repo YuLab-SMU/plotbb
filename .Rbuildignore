@@ -2,8 +2,10 @@ Makefile
 README.Rmd
 README_files
 .vscode
-CONDUCT.md
-CONDUCT.md
-README.md
-README.qmd
+^.*\.Rproj$
+^\.Rproj\.user$
+^CONDUCT\.md$
+^wechat-article-plotbb-recent-updates\.md$
+^README\.md$
+^README\.qmd$
 ^CRAN-SUBMISSION$

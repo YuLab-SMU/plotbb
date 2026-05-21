@@ -24,11 +24,44 @@ print.bbplot <- function(x, ...) {
         scales <- facet$scales %||% "fixed"
         scales <- match.arg(scales, c("fixed", "free", "free_x", "free_y"))
 
-        ncol <- facet$ncol %||% ceiling(sqrt(length(lev)))
-        nrow <- facet$nrow %||% ceiling(length(lev) / ncol)
-        par(mfrow = c(nrow, ncol))
+        if (!is.null(facet$nrow) && is.null(facet$ncol)) {
+            nrow <- facet$nrow
+            ncol <- ceiling(length(lev) / nrow)
+        } else if (is.null(facet$nrow) && !is.null(facet$ncol)) {
+            ncol <- facet$ncol
+            nrow <- ceiling(length(lev) / ncol)
+        } else if (!is.null(facet$nrow) && !is.null(facet$ncol)) {
+            nrow <- facet$nrow
+            ncol <- facet$ncol
+        } else {
+            ncol <- ceiling(sqrt(length(lev)))
+            nrow <- ceiling(length(lev) / ncol)
+        }
 
-        for (v in lev) {
+        global_main <- x$labs$main
+        global_sub <- x$labs$sub
+        top_oma <- if (!is.null(global_main) && !is.null(global_sub)) {
+            4
+        } else if (!is.null(global_main) || !is.null(global_sub)) {
+            3
+        } else {
+            0
+        }
+
+        adds <- x$adds
+        outside_legends <- Filter(function(obj) inherits(obj, "bb_legend") && isTRUE(obj$outside), adds)
+        if (length(outside_legends)) {
+            panel_layout <- matrix(seq_len(nrow * ncol), nrow = nrow, ncol = ncol, byrow = TRUE)
+            legend_idx <- max(panel_layout) + 1
+            layout_mat <- cbind(panel_layout, rep(legend_idx, nrow))
+            graphics::layout(layout_mat, widths = c(rep(1, ncol), 0.38))
+            graphics::par(oma = c(0, 0, top_oma, 0))
+        } else {
+            par(mfrow = c(nrow, ncol), oma = c(0, 0, top_oma, 0))
+        }
+
+        for (i in seq_along(lev)) {
+            v <- lev[i]
             idx <- as.character(facet_val) == v
             d <- data[idx, , drop = FALSE]
 
@@ -38,6 +71,9 @@ print.bbplot <- function(x, ...) {
                     args <- list(xy$x, xy$y, type = "n", xlab = "", ylab = "")
                     if (!is.null(xlim)) args$xlim <- xlim
                     if (!is.null(ylim)) args$ylim <- ylim
+                    if (nrow == 1 && scales %in% c("fixed", "free_x") && i > 1) {
+                        args$yaxt <- "n"
+                    }
                     do.call(graphics::plot, args)
                     return(invisible(NULL))
                 }
@@ -47,10 +83,10 @@ print.bbplot <- function(x, ...) {
 
             p <- .bbplot_initial(base_canvas, d, x$mapping)
 
-            adds <- x$adds
             if (length(adds)) {
                 for (obj in adds) {
                     if (inherits(obj, "bb_facet_wrap")) next
+                    if (inherits(obj, "bb_legend") && isTRUE(obj$outside)) next
                     p <- p + obj
                 }
             }
@@ -65,10 +101,11 @@ print.bbplot <- function(x, ...) {
                 )
             }
 
-            if (is.null(p$labs$main) && is.null(p$labs$sub)) {
-                p <- p + bb_title(paste0(rlang::as_label(rlang::f_rhs(facet$facets)), "=", v))
-            } else if (!is.null(p$labs$main) && is.null(p$labs$sub)) {
-                p <- p + bb_sub(paste0(rlang::as_label(rlang::f_rhs(facet$facets)), "=", v))
+            p$labs$main <- as.character(v)
+            p$labs$sub <- NULL
+
+            if (nrow == 1 && scales %in% c("fixed", "free_x")) {
+                graphics::par(mar = c(4, if (i == 1) 4 else 1.5, 3, 1))
             }
 
             bb_call_canvas(p$canvas, xlim = lim$xlim, ylim = lim$ylim)
@@ -80,6 +117,25 @@ print.bbplot <- function(x, ...) {
                 eval(ly())
             }
             do.call(title, p$labs)
+        }
+
+        if (length(outside_legends)) {
+            graphics::par(mar = c(0, 0, 0, 0), xpd = NA)
+            graphics::plot.new()
+            for (j in seq_along(outside_legends)) {
+                legend_obj <- outside_legends[[j]]
+                legend_obj$outside <- FALSE
+                legend_obj$position <- 0.05
+                legend_obj$params$y <- 0.85 - (j - 1) * 0.25
+                bb_draw_legend(legend_obj, x)
+            }
+        }
+
+        if (!is.null(global_main)) {
+            graphics::mtext(global_main, side = 3, outer = TRUE, line = if (!is.null(global_sub)) 1.5 else 1, font = 2)
+        }
+        if (!is.null(global_sub)) {
+            graphics::mtext(global_sub, side = 3, outer = TRUE, line = 0.2)
         }
 
         .bbplot <- get_plotbb_env()

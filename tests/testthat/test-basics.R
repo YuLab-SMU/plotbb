@@ -77,3 +77,31 @@ test_that("bb_bar canvas respects global limits", {
   lim <- plotbb:::bb_plot_limits(p)
   expect_true(lim$ylim[[2]] > max(df$y, na.rm = TRUE))
 })
+
+test_that("faceting prints with panel strips and global title", {
+  p <- bbplot(iris, bb_aes(Petal.Length, Sepal.Length, col = Species)) +
+    bb_point(pch = 19) +
+    bb_facet_wrap(~Species, nrow = 1) +
+    bb_title("Overall title")
+
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  expect_warning(print(p), NA)
+})
+
+test_that("grouped bb_lm skips CI warning for tiny groups", {
+  df <- data.frame(
+    x = c(1, 2, 3, 4),
+    y = c(2, 4, 3, 5),
+    g = c("A", "A", "B", "B")
+  )
+  p <- bbplot(df, bb_aes(x, y, col = g)) +
+    bb_point(pch = 19) +
+    bb_lm(bb_aes(group = g), se = TRUE)
+
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  expect_warning(print(p), NA)
+})

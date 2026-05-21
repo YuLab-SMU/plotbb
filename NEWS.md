@@ -1,3 +1,11 @@
+# plotbb 0.1.2
+
++ `bb_density` for density plots, including grouped density polygons with `fill` mapping and alpha blending (2026-05-21, Thu)
++ `bb_lm(se = TRUE)` supports confidence intervals for grouped linear fits, and skips CI prediction for tiny groups without residual degrees of freedom
++ `bb_legend` supports discrete `fill` legends and placing legends outside faceted plots
++ `bb_facet_wrap(nrow = 1)` layout is fixed, with panel strip titles showing facet labels and `bb_title` used as the overall plot title
++ add regression tests for faceting with global titles and grouped `bb_lm` CI behavior
+
 # plotbb 0.1.1
 
 + `bb_boxplot` and `bb_hist` (2026-01-30, Fri)

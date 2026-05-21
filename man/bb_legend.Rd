@@ -10,6 +10,7 @@ bb_legend(
   aesthetic = "col",
   pch = 19,
   bty = "n",
+  outside = FALSE,
   ...
 )
 }
@@ -18,11 +19,13 @@ bb_legend(
 
 \item{title}{legend title.}
 
-\item{aesthetic}{currently only supports \code{"col"}.}
+\item{aesthetic}{currently supports \code{"col"}, \code{"fill"}, \code{"pch"}, \code{"lty"}, \code{"cex"}.}
 
 \item{pch}{point shape used in legend.}
 
 \item{bty}{box type passed to \code{graphics::legend}.}
+
+\item{outside}{logical, whether to place the legend outside the plotting area.}
 
 \item{...}{additional parameters passed to \code{graphics::legend}.}
 }
