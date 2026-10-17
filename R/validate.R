@@ -58,7 +58,9 @@ bb_valid_rows <- function(x, y) {
     ok <- rep(TRUE, n)
     for (v in list(x, y)) {
         if (is.null(v)) next
-        if (!is.numeric(v)) {
+        if (inherits(v, "Date") || inherits(v, "POSIXct")) {
+            v <- as.numeric(v)
+        } else if (!is.numeric(v)) {
             ## a non-numeric coordinate cannot be placed or range-checked
             return(rep(FALSE, n))
         }

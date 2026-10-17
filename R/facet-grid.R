@@ -74,7 +74,8 @@ bbplot_add.bb_facet_grid <- function(object, plot) {
     plot
 }
 
-bb_facet_base_canvas <- function(plot, data, xlim, ylim) {
+bb_facet_base_canvas <- function(plot, data, xlim, ylim, log = "",
+                                  xaxt = NULL, yaxt = NULL) {
     xy <- bb_eval_xy(plot$mapping, data)
     if (!is.null(xy$x) && !is.null(xy$y) &&
         length(xy$x) > 0L && length(xy$y) > 0L &&
@@ -82,16 +83,21 @@ bb_facet_base_canvas <- function(plot, data, xlim, ylim) {
         args <- list(xy$x, xy$y, type = "n", xlab = "", ylab = "")
         if (!is.null(xlim)) args$xlim <- xlim
         if (!is.null(ylim)) args$ylim <- ylim
+        if (nzchar(log)) args$log <- log
+        if (!is.null(xaxt)) args$xaxt <- xaxt
+        if (!is.null(yaxt)) args$yaxt <- yaxt
         do.call(graphics::plot, args)
         return(invisible(NULL))
     }
     if (!is.null(xlim) && !is.null(ylim)) {
         graphics::plot.new()
-        graphics::plot.window(xlim = xlim, ylim = ylim)
+        graphics::plot.window(xlim = xlim, ylim = ylim,
+                              log = if (nzchar(log)) log else "")
         graphics::box()
         return(invisible(NULL))
     }
-    bb_call_canvas(plot$canvas, xlim = xlim, ylim = ylim)
+    bb_call_canvas(plot$canvas, xlim = xlim, ylim = ylim, log = log,
+                   xaxt = xaxt, yaxt = yaxt)
     invisible(NULL)
 }
 
@@ -134,7 +140,7 @@ bb_grid_specs <- function(plot) {
     if (nrow == 0L || ncol == 0L) return(list())
 
     adds <- plot$adds
-    global <- bb_plot_limits(plot)
+    global <- bb_apply_position_limits(plot, bb_plot_limits(plot))
     specs <- vector("list", nrow * ncol)
     k <- 0L
     for (i in seq_len(nrow)) {
@@ -150,8 +156,10 @@ bb_grid_specs <- function(plot) {
             ## see the last panel's data by the time printing happens.
             canvas <- local({
                 panel_rows <- panel_data
-                function(xlim = NULL, ylim = NULL) {
-                    bb_facet_base_canvas(plot, panel_rows, xlim, ylim)
+                function(xlim = NULL, ylim = NULL, log = "", xaxt = NULL,
+                         yaxt = NULL) {
+                    bb_facet_base_canvas(plot, panel_rows, xlim, ylim,
+                                         log = log, xaxt = xaxt, yaxt = yaxt)
                 }
             })
             panel <- .bbplot_initial(canvas, panel_data, plot$mapping)
@@ -177,7 +185,8 @@ bb_grid_specs <- function(plot) {
             }
             panel <- bb_summary_labs(panel)
             panel_scales <- bb_get_scales(panel)
-            lim <- if (empty_panel) NULL else bb_plot_limits(panel)
+            lim <- if (empty_panel) NULL else
+                bb_apply_position_limits(plot, bb_plot_limits(panel))
             specs[[k]] <- list(
                 i = i, j = j,
                 key = paste(row_lev[i], col_lev[j], sep = "|"),
@@ -296,9 +305,12 @@ bb_print_facet_grid <- function(x) {
         p <- spec$plot
         p$labs$main <- if (spec$i == 1L) spec$col_label else NULL
         p$labs$sub <- NULL
-        bb_call_canvas(p$canvas, xlim = spec$xlim, ylim = spec$ylim)
+        flags <- bb_position_axis_flags(p)
+        bb_call_canvas(p$canvas, xlim = spec$xlim, ylim = spec$ylim,
+                       log = flags$log, xaxt = flags$xaxt, yaxt = flags$yaxt)
         if (!is.null(p$panel.first)) eval(p$panel.first())
         for (ly in p$layer) eval(ly())
+        bb_draw_position_axes(p)
         do.call(title, p$labs)
         if (spec$j == ncol && nzchar(spec$row_label)) {
             graphics::mtext(spec$row_label, side = 4, line = 1, las = 1,
@@ -309,12 +321,18 @@ bb_print_facet_grid <- function(x) {
     if (length(outside_legends)) {
         graphics::par(mar = c(0, 0, 0, 0), xpd = NA)
         graphics::plot.new()
+        y_anchor <- 0.95
         for (j in seq_along(outside_legends)) {
             legend_obj <- outside_legends[[j]]
             legend_obj$outside <- FALSE
             legend_obj$position <- 0.05
-            legend_obj$params$y <- 0.85 - (j - 1) * 0.25
-            bb_draw_legend(legend_obj, x)
+            legend_obj$params$y <- y_anchor
+            drawn <- bb_draw_legend(legend_obj, x)
+            if (!is.null(drawn$rect)) {
+                y_anchor <- drawn$rect$top - drawn$rect$h - 0.03
+            } else {
+                y_anchor <- y_anchor - 0.35
+            }
         }
     }
 

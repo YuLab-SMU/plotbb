@@ -1,3 +1,47 @@
+# plotbb 0.9.0
+
+This release addresses the three structural gaps: positional scales, automatic
+legends, and the grouping/statistical-layer extension contract.
+
+## Positional scales and coord flip
+
++ `bb_scale_x_continuous()`, `bb_scale_y_continuous()`, `bb_scale_x_log10()`,
+  `bb_scale_y_log10()`, `bb_scale_x_date()` and `bb_scale_y_date()` control
+  axis limits, breaks, labels, log10 transforms and Date axes
++ limits are the final axis range, so values outside them are clipped instead
+  of stretching the canvas
++ `bb_coord_flip()` swaps the axes, labels and positional scales for
+  coordinate-symmetric layers (point, line, text, segment, tile, custom and
+  hline/vline); layers with their own orientation raise a clear error
+
+## Automatic legends
+
++ mapped `col`, `fill`, `pch`, `lty` and `cex` get outside legends by default;
+  `bbplot(auto_legend = FALSE)` disables them and an explicit `bb_legend()` for
+  an aesthetic takes over that aesthetic
++ a layer-local mapping gets a per-layer automatic legend, so its title comes
+  from the layer mapping
++ a free-colour facet skips automatic outside legends (one legend cannot
+  describe several colour domains)
+
+## Unified grouping and layer registry
+
++ `bb_group_values()` is the one grouping rule: explicit `group`, then a
+  discrete `x`, then mapped `col`, then mapped `fill`; density/histogram,
+  violin, ribbon and smooth all use it
++ `bb_layer()` gains `aesthetics`, `summary` and `range` so a custom
+  statistical layer can declare fill support, computed coordinates and its
+  ranges without editing package internals
++ `bb_plot_summarises()` and `bb_layer_is_summary()` honour the declared
+  `summary`; `bb_layer_limits()` calls the declared `range`
+
+## Tests and documentation
+
++ test-auto-legend-0.9.R, test-position-0.9.R, test-coord-0.9.R and
+  test-registry-0.9.R cover the new contracts
++ the vignette documents positional scales, coord flip, automatic legends and
+  the custom statistical-layer registry
+
 # plotbb 0.8.1
 
 Bug fixes found while auditing the 0.6.0-0.8.0 features.

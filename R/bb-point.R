@@ -113,7 +113,9 @@ bbplot_add.bb_layer <- function(object, plot) {
     params_list <- object$params %||% list()
     fill_layers <- list(ly_custom, ly_density, ly_tile, ly_bar, ly_boxplot,
                         ly_hist, ly_lm, ly_ribbon, ly_violin, ly_smooth)
-    fill_ok <- any(vapply(fill_layers, identical, logical(1), ly))
+    meta <- object$meta %||% list()
+    fill_ok <- any(vapply(fill_layers, identical, logical(1), ly)) ||
+        "fill" %in% (meta$aesthetics %||% character())
     if (!is.null(params_list$fill) && !fill_ok) {
         bb_abort("`fill` is not an aesthetic of this layer: use `col` for its ",
                  "colour. `fill` is distinguished only where the drawing ",
@@ -126,6 +128,7 @@ bbplot_add.bb_layer <- function(object, plot) {
     ## `limits` is a plot-level declaration (read by bb_layer_limits()), not a
     ## drawing argument; do not leak it into the drawing function.
     object$limits <- NULL
+    object$meta <- NULL
     if (is.null(object$inherit)) object$inherit <- TRUE
 
     ## `rlang::exec()` rather than do.call(): layer parameters must be passed

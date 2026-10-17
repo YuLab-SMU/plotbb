@@ -108,10 +108,7 @@ ly_ribbon <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
             fill <- rep(fill, length.out = n_ok)
         }
 
-        grp <- eval_mapping(mapping, "group", data)
-        if (is.null(grp) && !is.null(mapping$fill)) {
-            grp <- eval_mapping(mapping, "fill", data)
-        }
+        grp <- bb_group_values(mapping, data)
         if (!is.null(grp)) {
             grp <- as.character(rep(grp, length.out = n)[ok])
             if (any(is.na(grp))) {

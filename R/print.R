@@ -3,6 +3,10 @@
 print.bbplot <- function(x, ...) {
     bb_reset_warnings()
 
+    x <- bb_flip_plot(x)
+    auto <- bb_auto_legends(x)
+    if (length(auto)) x$adds <- c(x$adds, auto)
+
     if (!is.null(x$facet)) {
         snapshot <- bb_par_snapshot()
         on.exit(bb_par_restore(snapshot), add = TRUE)
@@ -30,6 +34,7 @@ print.bbplot <- function(x, ...) {
     ## summary labels and the limits that both building and drawing use.
     prepared <- bb_prepare_plot(x)
     x <- prepared$plot
+    axis_flags <- bb_position_axis_flags(x)
 
     outside_legends <- Filter(
         function(obj) inherits(obj, "bb_legend") && isTRUE(obj$outside),
@@ -50,7 +55,9 @@ print.bbplot <- function(x, ...) {
 
     lim <- prepared$limits
 
-    bb_call_canvas(x$canvas, xlim = lim$xlim, ylim = lim$ylim)
+    bb_call_canvas(x$canvas, xlim = lim$xlim, ylim = lim$ylim,
+                   log = axis_flags$log, xaxt = axis_flags$xaxt,
+                   yaxt = axis_flags$yaxt)
     if (!is.null(x$panel.first)) {
         eval(x$panel.first())
     }
@@ -58,18 +65,25 @@ print.bbplot <- function(x, ...) {
     for (ly in x$layer) {
         eval(ly())
     }
+    bb_draw_position_axes(x)
 
     do.call(title, x$labs)
 
     if (length(outside_legends)) {
         graphics::par(mar = c(0, 0, 0, 0), xpd = NA)
         graphics::plot.new()
+        y_anchor <- 0.95
         for (j in seq_along(outside_legends)) {
             legend_obj <- outside_legends[[j]]
             legend_obj$outside <- FALSE
             legend_obj$position <- 0.05
-            legend_obj$params$y <- 0.85 - (j - 1) * 0.25
-            bb_draw_legend(legend_obj, x)
+            legend_obj$params$y <- y_anchor
+            drawn <- bb_draw_legend(legend_obj, x)
+            if (!is.null(drawn$rect)) {
+                y_anchor <- drawn$rect$top - drawn$rect$h - 0.03
+            } else {
+                y_anchor <- y_anchor - 0.35
+            }
         }
     }
 
@@ -99,7 +113,7 @@ bb_print_facet <- function(x) {
     lev <- bb_facet_levels(facet, facet_val)
     if (length(lev) == 0) return(invisible(NULL))
 
-    lim_global <- bb_plot_limits(x)
+    lim_global <- bb_apply_position_limits(x, bb_plot_limits(x))
 
     scales <- facet$scales %||% "fixed"
     scales <- match.arg(scales, c("fixed", "free", "free_x", "free_y"))
@@ -141,7 +155,8 @@ bb_print_facet <- function(x) {
         empty_panel <- !any(idx)
         d <- data[idx, , drop = FALSE]
 
-        base_canvas <- function(xlim = NULL, ylim = NULL) {
+        base_canvas <- function(xlim = NULL, ylim = NULL, log = "",
+                                xaxt = NULL, yaxt = NULL) {
             xy <- bb_eval_xy(x$mapping, d)
             if (!is.null(xy$x) && !is.null(xy$y) &&
                 length(xy$x) > 0L && length(xy$y) > 0L &&
@@ -149,6 +164,9 @@ bb_print_facet <- function(x) {
                 args <- list(xy$x, xy$y, type = "n", xlab = "", ylab = "")
                 if (!is.null(xlim)) args$xlim <- xlim
                 if (!is.null(ylim)) args$ylim <- ylim
+                if (nzchar(log)) args$log <- log
+                if (!is.null(xaxt)) args$xaxt <- xaxt
+                if (!is.null(yaxt)) args$yaxt <- yaxt
                 if (nrow == 1 && scales %in% c("fixed", "free_x") && i > 1) {
                     args$yaxt <- "n"
                 }
@@ -157,11 +175,13 @@ bb_print_facet <- function(x) {
             }
             if (!is.null(xlim) && !is.null(ylim)) {
                 graphics::plot.new()
-                graphics::plot.window(xlim = xlim, ylim = ylim)
+                graphics::plot.window(xlim = xlim, ylim = ylim,
+                                      log = if (nzchar(log)) log else "")
                 graphics::box()
                 return(invisible(NULL))
             }
-            bb_call_canvas(x$canvas, xlim = xlim, ylim = ylim)
+            bb_call_canvas(x$canvas, xlim = xlim, ylim = ylim, log = log,
+                           xaxt = xaxt, yaxt = yaxt)
             invisible(NULL)
         }
 
@@ -212,7 +232,7 @@ bb_print_facet <- function(x) {
         if (identical(scales, "fixed") || empty_panel) {
             lim <- lim_global
         } else {
-            lim_panel <- bb_plot_limits(p)
+            lim_panel <- bb_apply_position_limits(x, bb_plot_limits(p))
             lim <- list(
                 xlim = if (scales %in% c("free", "free_x")) lim_panel$xlim else lim_global$xlim,
                 ylim = if (scales %in% c("free", "free_y")) lim_panel$ylim else lim_global$ylim
@@ -231,7 +251,9 @@ bb_print_facet <- function(x) {
             graphics::par(mar = c(4, if (i == 1) 4 else 1.5, 3, 1))
         }
 
-        bb_call_canvas(p$canvas, xlim = lim$xlim, ylim = lim$ylim)
+        flags <- bb_position_axis_flags(p)
+        bb_call_canvas(p$canvas, xlim = lim$xlim, ylim = lim$ylim,
+                       log = flags$log, xaxt = flags$xaxt, yaxt = flags$yaxt)
         if (!is.null(p$panel.first)) {
             eval(p$panel.first())
         }
@@ -239,18 +261,25 @@ bb_print_facet <- function(x) {
         for (ly in p$layer) {
             eval(ly())
         }
+        bb_draw_position_axes(p)
         do.call(title, p$labs)
     }
 
     if (length(outside_legends)) {
         graphics::par(mar = c(0, 0, 0, 0), xpd = NA)
         graphics::plot.new()
+        y_anchor <- 0.95
         for (j in seq_along(outside_legends)) {
             legend_obj <- outside_legends[[j]]
             legend_obj$outside <- FALSE
             legend_obj$position <- 0.05
-            legend_obj$params$y <- 0.85 - (j - 1) * 0.25
-            bb_draw_legend(legend_obj, x)
+            legend_obj$params$y <- y_anchor
+            drawn <- bb_draw_legend(legend_obj, x)
+            if (!is.null(drawn$rect)) {
+                y_anchor <- drawn$rect$top - drawn$rect$h - 0.03
+            } else {
+                y_anchor <- y_anchor - 0.35
+            }
         }
     }
 

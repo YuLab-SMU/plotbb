@@ -672,7 +672,6 @@ bb_draw_legend <- function(object, plot) {
     bb_check_legend_position(object$position, continuous = FALSE)
     bb_draw_discrete_legend(object, plot, scale, values, aesthetic, title,
                             map_aesthetic)
-    invisible(NULL)
 }
 
 bb_draw_discrete_legend <- function(object, plot, scale, values,
@@ -773,8 +772,7 @@ bb_draw_discrete_legend <- function(object, plot, scale, values,
         args$inset <- c(-0.2, 0)
     }
 
-    do.call(graphics::legend, args)
-    invisible(NULL)
+    invisible(do.call(graphics::legend, args))
 }
 
 bb_draw_colourbar <- function(object, plot, scale, values, title) {

@@ -30,6 +30,7 @@ bb_build <- function(plot) {
     if (!inherits(plot, "bbplot")) {
         bb_abort("`bb_build()` requires a `bbplot` object.")
     }
+    plot <- bb_flip_plot(plot)
 
     warnings <- character()
     built <- withCallingHandlers({
@@ -43,6 +44,7 @@ bb_build <- function(plot) {
             limits = prepared$limits,
             panels = bb_build_panels(p),
             labs = p$labs,
+            position = bb_position_scale_summary(p),
             facet = bb_build_facet(p$facet)
         )
     }, warning = function(w) {
@@ -108,7 +110,8 @@ bb_build_panels_grid <- function(plot) {
 bb_prepare_plot <- function(plot) {
     plot <- bb_train_scales(plot)
     plot <- bb_summary_labs(plot)
-    list(plot = plot, limits = bb_plot_limits(plot))
+    limits <- bb_apply_position_limits(plot, bb_plot_limits(plot))
+    list(plot = plot, limits = limits)
 }
 
 bb_mapping_labels <- function(mapping) {
@@ -178,7 +181,7 @@ bb_build_panels <- function(plot) {
     if (!length(keys)) return(list())
     bb_facet_layout(facet, length(keys))
     scales <- facet$scales %||% "fixed"
-    global <- bb_plot_limits(plot)
+    global <- bb_apply_position_limits(plot, bb_plot_limits(plot))
 
     lapply(keys, function(key) {
         idx <- !is.na(as.character(values)) & as.character(values) == key
@@ -210,7 +213,7 @@ bb_build_panels <- function(plot) {
             panel <- bb_facet_free_scales(panel, bb_get_scales(plot))
         }
         panel <- bb_summary_labs(panel)
-        lim <- bb_plot_limits(panel)
+        lim <- bb_apply_position_limits(plot, bb_plot_limits(panel))
         panel_scales <- bb_get_scales(panel)
 
         list(

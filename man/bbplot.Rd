@@ -4,12 +4,16 @@
 \alias{bbplot}
 \title{bbplot}
 \usage{
-bbplot(data, mapping = bb_aes())
+bbplot(data, mapping = bb_aes(), auto_legend = TRUE)
 }
 \arguments{
 \item{data}{data}
 
 \item{mapping}{variable mapping}
+
+\item{auto_legend}{if TRUE (the default), mapped aesthetics get outside
+legends automatically; explicit `bb_legend()` components take over the
+aesthetics they name.}
 }
 \value{
 bbplot object

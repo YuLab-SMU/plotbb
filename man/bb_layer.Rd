@@ -11,7 +11,10 @@ bb_layer(
   inherit = TRUE,
   ...,
   name = "custom layer",
-  limits = NULL
+  limits = NULL,
+  aesthetics = NULL,
+  summary = FALSE,
+  range = NULL
 )
 }
 \arguments{
@@ -35,6 +38,16 @@ A custom layer's data is inherited from \code{bbplot()} unless given.}
 \code{list(x = c(low, high), y = c(low, high))}. Both elements are
 optional. Use it for coordinates that are not mapped from the data, such
 as a reference line or an annotation drawn outside the data range.}
+
+\item{aesthetics}{optional mapped aesthetics the layer understands; include
+\code{"fill"} when a constant `fill` is an interior colour.}
+
+\item{summary}{logical; TRUE when the layer computes its own coordinates and
+the plot-level x/y should not be added to the ranges.}
+
+\item{range}{optional function \code{function(plot, data, mapping)} returning
+\code{list(x = ..., y = ...)} with computed ranges for a statistical
+layer.}
 }
 \value{
 A layer object to be added to a \code{bbplot} with \code{+}.
@@ -60,10 +73,10 @@ A custom layer takes part in the ranges of its mapped `x`/`y` values, like
 the built-in layers, and its `data` follows the `bb_facet_wrap()` panels.
 Coordinates that the drawing function computes itself (a smooth curve, a
 confidence band, a reference line) do not widen the axes on their own; pass
-them explicitly in `limits` when they should. The scales and the legend are
-not extended automatically: if the custom drawing needs more room or a
-different scale, draw a wider mapped data range, declare `limits`, or start
-from a canvas created by \code{as.bbplot()}.
+them explicitly in `limits`, or supply a `range` function for a statistical
+layer. The scales and the legend are not extended automatically: if the
+custom drawing needs a different scale, use the public scale constructors or
+start from a canvas created by \code{as.bbplot()}.
 }
 \examples{
 library(plotbb)

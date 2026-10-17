@@ -7,6 +7,9 @@
 ##' @title bbplot
 ##' @param data data
 ##' @param mapping variable mapping
+##' @param auto_legend if TRUE (the default), mapped aesthetics get outside
+##'   legends automatically; explicit `bb_legend()` components take over the
+##'   aesthetics they name.
 ##'
 ##' @details
 ##' `+` adds components (layers, themes, labels, scales, legends, facets) to a
@@ -27,8 +30,13 @@
 ##' p <- bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl)))
 ##' p + bb_grid(col='grey50', lty='dashed') + bb_point(pch=19)
 ##' @author Guangchuang Yu
-bbplot <- function(data, mapping = bb_aes()) {
-    p <- function(xlim = NULL, ylim = NULL, ...) {
+bbplot <- function(data, mapping = bb_aes(), auto_legend = TRUE) {
+    if (!is.logical(auto_legend) || length(auto_legend) != 1L ||
+        is.na(auto_legend)) {
+        bb_abort("`auto_legend` in `bbplot()` must be TRUE or FALSE.")
+    }
+    p <- function(xlim = NULL, ylim = NULL, log = "", xaxt = NULL,
+                  yaxt = NULL, ...) {
         xy <- bb_eval_xy(mapping, data)
         
         if (!is.null(xlim) && !is.null(ylim)) {
@@ -41,6 +49,9 @@ bbplot <- function(data, mapping = bb_aes()) {
                 xlim = xlim,
                 ylim = ylim
             )
+            if (nzchar(log)) args$log <- log
+            if (!is.null(xaxt)) args$xaxt <- xaxt
+            if (!is.null(yaxt)) args$yaxt <- yaxt
             do.call(graphics::plot, c(args, list(...)))
             return(invisible(NULL))
         }
@@ -54,13 +65,18 @@ bbplot <- function(data, mapping = bb_aes()) {
         )
         if (!is.null(xlim)) args$xlim <- xlim
         if (!is.null(ylim)) args$ylim <- ylim
+        if (nzchar(log)) args$log <- log
+        if (!is.null(xaxt)) args$xaxt <- xaxt
+        if (!is.null(yaxt)) args$yaxt <- yaxt
         do.call(graphics::plot, c(args, list(...)))
     }
     
-    .bbplot_initial(p, data, mapping) +
+    plot <- .bbplot_initial(p, data, mapping) +
         bb_labs(
             xlab = if (!is.null(mapping$x)) rlang::as_label(mapping$x) else NULL,
             ylab = if (!is.null(mapping$y)) rlang::as_label(mapping$y) else NULL
         )
+    plot$auto_legend <- isTRUE(auto_legend)
+    plot
 }
 

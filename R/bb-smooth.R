@@ -177,13 +177,7 @@ ly_smooth <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     bb_check_length(y, n, "y", "bb_smooth")
     x <- rep(x, length.out = n)
     y <- rep(y, length.out = n)
-    grp <- eval_mapping(mapping, "group", data)
-    if (is.null(grp) && !is.null(mapping$col)) {
-        grp <- eval_mapping(mapping, "col", data)
-    }
-    if (is.null(grp) && !is.null(mapping$fill)) {
-        grp <- eval_mapping(mapping, "fill", data)
-    }
+    grp <- bb_group_values(mapping, data)
     grp <- if (is.null(grp)) rep("all", n) else
         as.character(rep(grp, length.out = n))
     ok <- is.finite(x) & is.finite(y)

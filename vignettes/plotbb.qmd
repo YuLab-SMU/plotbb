@@ -381,6 +381,13 @@ result in the scale. Two consequences matter in practice:
 * constants are removed from the mapping before training, so a constant colour
   never contributes a level to the scale or the legend.
 
+Legends are automatic: every mapped aesthetic (`col`, `fill`, `pch`, `lty`,
+`cex`) gets an outside legend unless `bbplot(auto_legend = FALSE)` or an explicit
+`bb_legend()` component for that aesthetic takes over. The automatic legend for
+a layer-local mapping is tied to that layer, so its title comes from the layer
+mapping rather than the plot mapping. A free-colour facet skips automatic
+outside legends because one legend cannot describe several colour domains.
+
 Facets train once on the full plot and share the resulting domain by default:
 the same value gets the same colour in every panel. `free_colour = TRUE` opts
 into a per-panel col/fill domain (an explicit colour scale is required; the
@@ -523,6 +530,49 @@ bbplot(free_data, bb_aes(x, y, col = g)) +
   bb_point() +
   bb_scale_col_manual(c(u = "red", v = "blue", w = "green")) +
   bb_facet_wrap(~panel, ncol = 2, free_colour = TRUE)
+```
+
+## Positional scales
+
+The x and y axes have their own scales, separate from the aesthetic scales.
+`bb_scale_x_continuous()` and `bb_scale_y_continuous()` take `limits`, `breaks`
+and `labels`; `bb_scale_x_log10()`/`bb_scale_y_log10()` are log10 shortcuts, and
+`bb_scale_x_date()`/`bb_scale_y_date()` use Date limits and
+`graphics::axis.Date()`. Limits are the final axis range, so a point outside
+them is clipped rather than stretching the canvas.
+
+```{r plotbb-position}
+pos_data <- data.frame(x = 1:20, y = seq(1, 100, length.out = 20))
+bbplot(pos_data, bb_aes(x, y)) +
+  bb_point() +
+  bb_scale_x_continuous(limits = c(5, 15),
+                        breaks = c(5, 10, 15),
+                        labels = c("low", "mid", "high")) +
+  bb_scale_y_log10(limits = c(1, 100))
+```
+
+A date axis keeps the Date class for its limits and breaks:
+
+```{r plotbb-position-date}
+date_data <- data.frame(date = as.Date("2024-01-01") + 0:20,
+                        value = 1:21)
+bbplot(date_data, bb_aes(date, value)) +
+  bb_point() +
+  bb_scale_x_date(format = "%b %d")
+```
+
+`bb_coord_flip()` swaps the axes, including the axis labels and positional
+scales. It is deliberately limited to coordinate-symmetric layers (`bb_point()`,
+`bb_line()`, `bb_text()`, `bb_segment()`, `bb_tile()`, custom layers and
+`bb_hline()`/`bb_vline()`); a layer that computes its own orientation (violin,
+boxplot, bar, density, histogram, ribbon, smooth, lm, errorbar) raises an error
+instead of drawing sideways.
+
+```{r plotbb-coord-flip}
+bbplot(pos_data, bb_aes(x, y)) +
+  bb_point() +
+  bb_hline(50) +
+  bb_coord_flip()
 ```
 
 ## Facets
@@ -915,7 +965,10 @@ they differ in how much of the grammar they get:
 * **`bb_layer()`** is the stable custom-layer entry point. It inherits data and
   mapping, honours constants, draws at print time in `+` order, follows the
   facets, contributes its mapped `x`/`y` (and any declared `limits`) to the
-  ranges, and propagates errors unchanged. It does not extend the scales or the
+  ranges, and propagates errors unchanged. A statistical layer can also declare
+  `aesthetics = "fill"`, `summary = TRUE` and a `range = function(plot, data,
+  mapping)` returning `list(x = ..., y = ...)`, so it participates in ranges
+  without editing package internals. It does not extend the scales or the
   legend.
 * **`bbplot_add()`** lets a package define a new *kind of component*. A method
   receives the object and the plot, returns the modified plot, and should
@@ -943,7 +996,29 @@ p + bb_point(pch = 19) + bb_threshold(300)
 The component is re-applied inside every facet panel, takes part in the `+`
 order and is covered by the same graphics-state restoration as the built-in
 components; the layer the method adds is not added a second time when a panel is
-rebuilt. The custom drawing itself still follows the `bb_layer()` limits:
+rebuilt.
+
+Statistical grouping has one rule, exposed as `bb_group_values()`: an explicit
+`group` mapping wins, then a discrete `x`, then a mapped `col`, then a mapped
+`fill`. Custom statistical layers should call it instead of inventing their own
+precedence.
+
+```{r plotbb-custom-stat}
+bbplot(mtcars, bb_aes(factor(cyl), mpg)) +
+  bb_layer(
+    function(x, y, ...) {
+      graphics::rect(0.5, min(y), 3.5, max(y), col = "grey95", border = NA)
+      graphics::points(as.numeric(x), y, ...)
+    },
+    aesthetics = "fill",
+    summary = TRUE,
+    range = function(plot, data, mapping) {
+      list(x = c(0.5, 3.5), y = range(data$mpg, na.rm = TRUE))
+    }
+  )
+```
+
+The custom drawing itself still follows the `bb_layer()` limits:
 mapped coordinates count towards the ranges, coordinates it computes itself do
 not unless declared with `limits`.
 
@@ -1166,6 +1241,10 @@ it to a device and restores the caller's device afterwards.
 Extension: `bb_layer()` adds a drawing function inside the grammar;
 `bbplot_add()` adds a new component class (register the S3 method in a package).
 
+Position: `bb_scale_x_continuous()`, `bb_scale_y_continuous()`,
+`bb_scale_x_log10()`, `bb_scale_y_log10()`, `bb_scale_x_date()`,
+`bb_scale_y_date()`, `bb_coord_flip()`.
+
 Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
 (and `bb_title()`,`bb_sub()`, `bb_xlab()`, `bb_ylab()`), `bb_theme()` with the presets
 `bb_theme_expand()`, `bb_theme_grey()`, `bb_theme_deepblue()`,
@@ -1202,3 +1281,8 @@ Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
 * A mapped `col`/`lty` on `bb_line()` applies one value to the whole polyline; a
   polyline cannot change colour halfway. Add a `group` mapping to draw one line
   per group.
+* `bb_coord_flip()` only flips coordinate-symmetric layers; horizontal violin,
+  boxplot and bar need an orientation argument, which is not part of this
+  release.
+* Automatic legends are outside legends; a free-colour facet skips them because
+  it cannot have one outside legend for several colour domains.

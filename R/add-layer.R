@@ -72,11 +72,13 @@ add_layer <- function(plot, layer, layer_name = "customized layer") {
     return(plot)
 }
 
-build_layer <- function(mapping, data, ..., inherit = TRUE, limits = NULL, layer) {
+build_layer <- function(mapping, data, ..., inherit = TRUE, limits = NULL,
+                       layer, meta = NULL) {
     structure(list(mapping = mapping,
                    data = data,
                    inherit = isTRUE(inherit),
                    limits = limits,
+                   meta = meta,
                    params = list(...),
                    layer = layer
                    ),

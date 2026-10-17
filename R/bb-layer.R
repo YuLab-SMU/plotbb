@@ -17,10 +17,10 @@
 ##' the built-in layers, and its `data` follows the `bb_facet_wrap()` panels.
 ##' Coordinates that the drawing function computes itself (a smooth curve, a
 ##' confidence band, a reference line) do not widen the axes on their own; pass
-##' them explicitly in `limits` when they should. The scales and the legend are
-##' not extended automatically: if the custom drawing needs more room or a
-##' different scale, draw a wider mapped data range, declare `limits`, or start
-##' from a canvas created by \code{as.bbplot()}.
+##' them explicitly in `limits`, or supply a `range` function for a statistical
+##' layer. The scales and the legend are not extended automatically: if the
+##' custom drawing needs a different scale, use the public scale constructors or
+##' start from a canvas created by \code{as.bbplot()}.
 ##'
 ##' @title bb_layer
 ##' @param draw a function that draws the layer. Its first arguments are
@@ -35,6 +35,13 @@
 ##'   \code{list(x = c(low, high), y = c(low, high))}. Both elements are
 ##'   optional. Use it for coordinates that are not mapped from the data, such
 ##'   as a reference line or an annotation drawn outside the data range.
+##' @param aesthetics optional mapped aesthetics the layer understands; include
+##'   \code{"fill"} when a constant `fill` is an interior colour.
+##' @param summary logical; TRUE when the layer computes its own coordinates and
+##'   the plot-level x/y should not be added to the ranges.
+##' @param range optional function \code{function(plot, data, mapping)} returning
+##'   \code{list(x = ..., y = ...)} with computed ranges for a statistical
+##'   layer.
 ##' @param ... fixed aesthetics and any other values passed to \code{draw}.
 ##' @param name shown when the plot's layers are printed.
 ##' @return A layer object to be added to a \code{bbplot} with \code{+}.
@@ -55,17 +62,35 @@
 ##'     graphics::abline(h = min(y) - 50, col = "firebrick", lty = 2)
 ##'   }, limits = list(y = range(mtcars$disp) + c(-60, 0)))
 bb_layer <- function(draw, mapping = NULL, data = NULL, inherit = TRUE,
-                     ..., name = "custom layer", limits = NULL) {
+                     ..., name = "custom layer", limits = NULL,
+                     aesthetics = NULL, summary = FALSE, range = NULL) {
     if (!is.function(draw)) {
         bb_abort("`draw` must be a function, not <", class(draw)[[1]], ">.")
     }
     limits <- bb_check_layer_limits(limits)
+    if (!is.null(aesthetics)) {
+        bad <- setdiff(aesthetics, c("col", "fill", "pch", "lty", "cex"))
+        if (length(bad)) {
+            bb_abort("`aesthetics` may only name col, fill, pch, lty or cex; ",
+                     "got `", bad[[1]], "`.")
+        }
+        aesthetics <- unique(as.character(aesthetics))
+    }
+    if (!is.logical(summary) || length(summary) != 1L || is.na(summary)) {
+        bb_abort("`summary` in `bb_layer()` must be TRUE or FALSE.")
+    }
+    if (!is.null(range) && !is.function(range)) {
+        bb_abort("`range` in `bb_layer()` must be a function or NULL.")
+    }
     params <- list(...)
     params$name <- name
     params$draw <- draw
     do.call(build_layer, c(list(mapping = mapping, data = data,
                                 inherit = inherit, limits = limits,
-                                layer = ly_custom),
+                                layer = ly_custom,
+                                meta = list(aesthetics = aesthetics,
+                                            summary = isTRUE(summary),
+                                            range = range)),
                            params))
 }
 
@@ -108,17 +133,41 @@ ly_custom <- function(plot, mapping = NULL, data = NULL, inherit = TRUE,
                                    extra = "label")
 
     xy <- bb_eval_xy(mapping, data)
-
-    prepared <- bb_prepare_aes(xy$x, xy$y, mapping, data, "bb_layer", params,
-                               extra = "label")
-    if (is.null(prepared)) {
-        return(add_layer(plot, function() invisible(NULL), name))
+    x <- xy$x
+    y <- xy$y
+    n <- max(length(x) %||% 0L, length(y) %||% 0L, nrow(data) %||% 0L)
+    if (n == 0L) {
+        bb_abort("`bb_layer()` has no data to draw.")
     }
-    keep <- prepared$keep
-    n <- prepared$n
+    if (!is.null(x) && !is.null(y) && length(x) != length(y) &&
+        length(x) != 1L && length(y) != 1L) {
+        bb_abort("x and y mapped in `bb_layer()` have different lengths (",
+                 length(x), " and ", length(y), ").")
+    }
+    for (a in c("col", "fill", "pch", "lty", "cex", "label")) {
+        mapped <- bb_mapped_length(mapping, data, a)
+        if (a == "col" && !is.null(mapped)) mapped <- eval_mapping(mapping, a, data)
+        bb_check_length(mapped, n, a, "bb_layer")
+        bb_check_length(params[[a]], n, a, "bb_layer")
+    }
+    keep <- rep(TRUE, n)
+    for (v in list(x, y)) {
+        if (is.null(v)) next
+        v <- rep(v, length.out = n)
+        if (inherits(v, "Date") || inherits(v, "POSIXct")) {
+            keep <- keep & is.finite(as.numeric(v))
+        } else if (is.numeric(v)) {
+            keep <- keep & is.finite(v)
+        } else {
+            keep <- keep & !is.na(v)
+        }
+    }
+    if (!any(keep)) {
+        bb_abort("`bb_layer()` has no finite coordinates to draw.")
+    }
     params <- bb_layer_constants(params, keep, n)
-    x <- prepared$x
-    y <- prepared$y
+    x <- if (is.null(x)) NULL else rep(x, length.out = n)[keep]
+    y <- if (is.null(y)) NULL else rep(y, length.out = n)[keep]
 
     ## Mapped aesthetics are read when the plot is drawn, not when the layer is
     ## added: a scale added later in the `+` chain must still apply, and a

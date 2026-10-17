@@ -153,7 +153,8 @@ bb_resolve_palette <- function(plot, palette = NULL) {
     NULL
 }
 
-bb_call_canvas <- function(canvas, xlim = NULL, ylim = NULL) {
+bb_call_canvas <- function(canvas, xlim = NULL, ylim = NULL, log = "",
+                             xaxt = NULL, yaxt = NULL) {
     fml <- formals(canvas)
     if (is.null(fml)) return(canvas())
 
@@ -161,6 +162,25 @@ bb_call_canvas <- function(canvas, xlim = NULL, ylim = NULL) {
     args <- list()
     if (!is.null(xlim) && (has_dots || "xlim" %in% names(fml))) args$xlim <- xlim
     if (!is.null(ylim) && (has_dots || "ylim" %in% names(fml))) args$ylim <- ylim
+    if (nzchar(log)) {
+        if (!(has_dots || "log" %in% names(fml))) {
+            bb_abort("a positional scale needs a canvas that accepts `log`; ",
+                     "this canvas does not.")
+        }
+        args$log <- log
+    }
+    if (!is.null(xaxt)) {
+        if (!(has_dots || "xaxt" %in% names(fml))) {
+            bb_abort("a positional scale needs a canvas that accepts `xaxt`.")
+        }
+        args$xaxt <- xaxt
+    }
+    if (!is.null(yaxt)) {
+        if (!(has_dots || "yaxt" %in% names(fml))) {
+            bb_abort("a positional scale needs a canvas that accepts `yaxt`.")
+        }
+        args$yaxt <- yaxt
+    }
     do.call(canvas, args)
 }
 
@@ -191,10 +211,33 @@ bb_stat_values <- function(x, y = NULL) {
 ## explicit `group` mapping wins, then `col`, then `fill`. A constant aesthetic
 ## is not a mapping and never groups.
 bb_stat_group <- function(values, mapping, data) {
-    values$group %||%
-        eval_mapping(mapping, "group", data) %||%
+    eval_mapping(mapping, "group", data) %||%
+        values$group %||%
         eval_mapping(mapping, "col", data) %||%
         eval_mapping(mapping, "fill", data)
+}
+
+##' Resolve the grouping values of a statistical layer
+##'
+##' The one grouping rule used by the statistical layers: an explicit `group`
+##' mapping wins, then a discrete `x`, then a mapped `col`, then a mapped `fill`.
+##' Custom statistical layers can call this function so they group like the
+##' built-in ones.
+##'
+##' @title bb_group_values
+##' @param mapping the effective aesthetic mapping
+##' @param data the layer data
+##' @param x optional x values; used when they are a factor or character
+##' @return A vector of group values, or NULL when there is no grouping
+##' @export
+##' @author Guangchuang Yu
+bb_group_values <- function(mapping, data, x = NULL) {
+    explicit <- eval_mapping(mapping, "group", data)
+    if (!is.null(explicit)) return(explicit)
+    if (!is.null(x) && (is.factor(x) || is.character(x))) return(x)
+    col <- eval_mapping(mapping, "col", data)
+    if (!is.null(col)) return(col)
+    eval_mapping(mapping, "fill", data)
 }
 
 bb_discrete_levels <- function(x) {
@@ -211,6 +254,14 @@ bb_discrete_levels <- function(x) {
 bb_range_union <- function(rng, x) {
     if (is.null(x)) return(rng)
     if (length(x) == 0) return(rng)
+
+    if (inherits(x, "Date") || inherits(x, "POSIXct")) {
+        x <- x[!is.na(x)]
+        if (!length(x)) return(rng)
+        xr <- range(x)
+        if (is.null(rng)) return(xr)
+        return(range(c(as.numeric(rng), as.numeric(xr))))
+    }
     
     if (is.factor(x)) {
         x <- as.integer(x)
@@ -293,7 +344,9 @@ bb_summary_labs <- function(plot) {
 bb_plot_summarises <- function(plot) {
     any(vapply(plot$adds, function(obj) {
         inherits(obj, "bb_layer") &&
-            (identical(obj$layer, ly_hist) || identical(obj$layer, ly_density) ||
+            (isTRUE((obj$meta %||% list())$summary) ||
+                 identical(obj$layer, ly_hist) ||
+                 identical(obj$layer, ly_density) ||
                  identical(obj$layer, ly_violin))
     }, logical(1)))
 }
@@ -310,6 +363,7 @@ bb_layer_is_reference <- function(layer_obj) {
 
 bb_layer_is_summary <- function(layer_obj) {
     if (!inherits(layer_obj, "bb_layer")) return(FALSE)
+    if (isTRUE((layer_obj$meta %||% list())$summary)) return(TRUE)
     summary_layers <- list(ly_hist, ly_density, ly_bar, ly_boxplot, ly_lm,
                            ly_signif, ly_violin)
     any(vapply(summary_layers, identical, logical(1), layer_obj$layer))
@@ -335,6 +389,22 @@ bb_layer_limits <- function(layer_obj, plot) {
     data <- bb_data(plot, layer_obj$data)
     mapping <- bb_layer_mapping(plot, layer_obj)
     ly <- layer_obj$layer
+    meta <- layer_obj$meta %||% list()
+
+    if (is.function(meta$range)) {
+        extra <- tryCatch(meta$range(plot, data, mapping),
+                          error = function(e) NULL)
+        if (!is.null(extra)) {
+            if (!is.list(extra) || is.null(names(extra)) ||
+                !all(names(extra) %in% c("x", "y"))) {
+                bb_abort("`range` in `bb_layer()` must return a list with ",
+                         "`x` and/or `y`.")
+            }
+            xlim <- bb_range_union(xlim, extra$x)
+            ylim <- bb_range_union(ylim, extra$y)
+        }
+        if (isTRUE(meta$summary)) return(current())
+    }
 
     if (identical(ly, ly_hline) || identical(ly, ly_vline)) {
         if (isTRUE(layer_obj$params$expand_limits)) {
@@ -525,19 +595,13 @@ bb_layer_limits <- function(layer_obj, plot) {
         width <- layer_obj$params$width %||% 0.9
         n <- max(length(y), length(x) %||% 0L)
         y <- rep(y, length.out = n)
-        ok <- is.finite(y)
-        if (is.null(x)) {
-            pos <- rep(1, n)
-        } else if (is.factor(x) || is.character(x)) {
-            pos <- match(as.character(rep(x, length.out = n)),
-                         sort(unique(as.character(x[ok]))))
-        } else {
-            pos <- as.numeric(rep(x, length.out = n))
-        }
-        ok <- ok & is.finite(pos)
+        x <- if (is.null(x)) NULL else rep(x, length.out = n)
+        grp <- bb_group_values(mapping, data, x)
+        pos <- bb_violin_positions(x, grp, n)
+        ok <- is.finite(y) & is.finite(pos$positions) & !is.na(pos$groups)
         if (!any(ok)) return(current())
-        xlim <- bb_range_union(xlim, pos[ok] - width / 2)
-        xlim <- bb_range_union(xlim, pos[ok] + width / 2)
+        xlim <- bb_range_union(xlim, pos$positions[ok] - width / 2)
+        xlim <- bb_range_union(xlim, pos$positions[ok] + width / 2)
         ylim <- bb_range_union(ylim, y[ok])
         ## With trim = FALSE the density support extends past the data, so the
         ## range has to include the estimated support of every group.
@@ -548,12 +612,7 @@ bb_layer_limits <- function(layer_obj, plot) {
             adjust <- params$adjust %||% 1
             kernel <- params$kernel %||% "gaussian"
             n_grid <- params$n %||% 512L
-            grp <- eval_mapping(mapping, "group", data)
-            if (is.null(grp) && !is.null(x)) {
-                grp <- as.character(rep(x, length.out = n))
-            }
-            grp <- if (is.null(grp)) rep("all", n) else
-                as.character(rep(grp, length.out = n))
+            grp <- pos$groups
             gy <- rep(y, length.out = n)
             for (g in sort(unique(grp))) {
                 values <- gy[grp == g & is.finite(gy)]

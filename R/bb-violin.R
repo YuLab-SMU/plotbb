@@ -92,30 +92,16 @@ ly_violin <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
             return(invisible(NULL))
         }
 
-        if (is.null(x)) {
-            groups <- rep("all", n)
-            positions <- rep(1, n)
-            labels <- NULL
-        } else if (is.factor(x) || is.character(x)) {
-            labels <- sort(unique(as.character(x[ok])))
-            groups <- as.character(x)
-            positions <- match(groups, labels)
-        } else {
-            positions <- as.numeric(x)
-            groups <- as.character(positions)
-            labels <- sort(unique(positions[ok]))
-        }
+        grp <- bb_group_values(mapping, data, x)
+        pos <- bb_violin_positions(x, grp, n)
+        groups <- pos$groups
+        positions <- pos$positions
 
-        ok <- ok & is.finite(positions)
+        ok <- ok & is.finite(positions) & !is.na(groups)
         if (!any(ok)) {
             bb_warn("`bb_violin()` has no finite group positions to draw; ",
                     "skipped.")
             return(invisible(NULL))
-        }
-
-        group_map <- eval_mapping(mapping, "group", data)
-        if (!is.null(group_map)) {
-            groups <- as.character(rep(group_map, length.out = n))
         }
 
         fill_vec <- NULL
@@ -178,4 +164,33 @@ ly_violin <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     }
 
     add_layer(plot, ly, "violin layer")
+}
+
+## One position rule for drawing and for the canvas. A factor/character x keeps
+## its levels as positions; a numeric x is either the position itself (when it is
+## the only grouping) or a group index when group/col/fill decides the groups.
+bb_violin_positions <- function(x, group, n) {
+    if (is.null(x)) {
+        groups <- if (is.null(group)) rep("all", n) else
+            as.character(rep(group, length.out = n))
+        labels <- if (is.null(group)) NULL else sort(unique(groups))
+        positions <- if (is.null(group)) rep(1, n) else match(groups, labels)
+        return(list(groups = groups, positions = positions, labels = labels))
+    }
+    if (is.factor(x) || is.character(x)) {
+        labels <- sort(unique(as.character(x)))
+        groups <- if (is.null(group)) as.character(x) else
+            as.character(rep(group, length.out = n))
+        positions <- match(as.character(x), labels)
+        return(list(groups = groups, positions = positions, labels = labels))
+    }
+    if (is.null(group)) {
+        groups <- as.character(x)
+        positions <- as.numeric(x)
+        return(list(groups = groups, positions = positions,
+                    labels = sort(unique(positions))))
+    }
+    groups <- as.character(rep(group, length.out = n))
+    labels <- sort(unique(groups))
+    list(groups = groups, positions = match(groups, labels), labels = labels)
 }
