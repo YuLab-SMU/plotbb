@@ -17,6 +17,13 @@ ly_hist <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
     params <- list(...)
     mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+    ## A constant `fill` names the interior of the bars/boxes; after the
+    ## mapping has been resolved (so the constant also removes a mapped fill),
+    ## it becomes the `col` the base function understands.
+    if (is.null(params$col) && !is.null(params$fill)) {
+        params$col <- params$fill
+        params$fill <- NULL
+    }
 
 
     ly <- function() {
@@ -28,7 +35,6 @@ ly_hist <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
         x <- values$x
         keep_finite <- is.finite(x)
         x <- x[keep_finite]
-        if (!length(x)) return(invisible(NULL))
         if (length(x) < 2) {
             bb_warn("`bb_hist()` needs at least two finite values to draw a histogram; skipped.")
             return(invisible(NULL))
@@ -41,9 +47,22 @@ ly_hist <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
             # an observation-level aesthetic. Use a mapped colour only when
             # all observations resolve to one colour; grouped data is handled
             # explicitly below.
-            if (is.null(params$col) && !is.null(mapping$col)) {
-                col_vec <- bb_col(mapping, data, plot = plot)
-                if (length(unique(col_vec)) == 1L) args$col <- col_vec[[1]]
+            if (is.null(args$col)) {
+                colour_values <- if (!is.null(mapping$fill)) {
+                    eval_mapping(mapping, "fill", data)
+                } else {
+                    eval_mapping(mapping, "col", data)
+                }
+                if (!is.null(colour_values)) {
+                    cols <- if (!is.null(mapping$fill)) {
+                        bb_fill(mapping, data, plot = plot)
+                    } else {
+                        bb_col(mapping, data, plot = plot)
+                    }
+                    cols <- cols[keep_finite]
+                    cols <- unique(cols[!is.na(cols)])
+                    if (length(cols) == 1L) args$col <- cols[[1]]
+                }
             }
             args$add <- TRUE
             do.call(graphics::hist, c(list(x = x), args))
@@ -59,16 +78,24 @@ ly_hist <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
         breaks <- args$breaks %||% "Sturges"
         all_breaks <- graphics::hist(x, breaks = breaks, plot = FALSE)$breaks
 
-        group_cols <- params$col
+        group_cols <- args$col
         if (is.null(group_cols)) {
             colour_mapping <- mapping$col %||% mapping$fill
             if (!is.null(colour_mapping)) {
-                colour_values <- eval_mapping(mapping,
-                    if (!is.null(mapping$col)) "col" else "fill", data)
+                colour_values <- if (!is.null(mapping$fill)) {
+                    eval_mapping(mapping, "fill", data)
+                } else {
+                    eval_mapping(mapping, "col", data)
+                }
                 colour_values <- colour_values[keep_finite]
-                raw_cols <- bb_col(mapping, data, plot = plot)
+                raw_cols <- if (!is.null(mapping$fill)) {
+                    bb_fill(mapping, data, plot = plot)
+                } else {
+                    bb_col(mapping, data, plot = plot)
+                }
+                raw_cols <- raw_cols[keep_finite]
                 colour_levels <- bb_discrete_levels(colour_values)
-                colour_cols <- unique(raw_cols)
+                colour_cols <- unique(raw_cols[!is.na(raw_cols)])
                 if (length(colour_cols) == length(colour_levels)) {
                     names(colour_cols) <- colour_levels
                     group_cols <- unname(colour_cols[levels])

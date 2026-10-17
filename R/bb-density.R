@@ -19,7 +19,10 @@ bb_density <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
 ## never sent through a colour scale. Without a constant, the mapped `col` (or
 ## `fill`) decides.
 bb_density_colour <- function(params, mapping, data, plot) {
-    params$fill %||% params$col %||% bb_col(mapping, data, plot = plot)
+    constant <- params$fill %||% params$col
+    if (!is.null(constant)) return(constant)
+    if (!is.null(mapping$fill)) return(bb_fill(mapping, data, plot = plot))
+    bb_col(mapping, data, plot = plot)
 }
 
 ly_density <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
@@ -74,19 +77,10 @@ ly_density <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
             cols <- params$fill %||% params$col
             if (!is.null(cols)) {
                 cols <- rep(cols, length.out = length(grp_chr))
+            } else if (!is.null(mapping$fill)) {
+                cols <- bb_fill(mapping, data, plot = plot)
             } else {
                 cols <- bb_col(mapping, data, plot = plot)
-
-                # Support mapping fill directly for polygon-based layers.
-                if (!is.null(mapping$fill)) {
-                     fill_var <- eval_mapping(mapping, "fill", data)
-                     scale_fill <- plot$scales$fill %||% plot$scales$col
-                     if (is.null(scale_fill)) {
-                         scale_fill <- structure(list(palette = NULL, type = "palette"), class = "bb_palette")
-                     }
-                     mapped_cols <- bb_scale_col_map(scale_fill, fill_var)
-                     if (!is.null(mapped_cols)) cols <- mapped_cols
-                }
             }
 
             if (!is.null(cols)) {

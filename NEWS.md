@@ -1,3 +1,59 @@
+# plotbb 0.3.0
+
+This release unifies the scale and legend semantics: one trained scale per
+aesthetic, used by both the layers and the legend, with `col` and `fill` as
+separate aesthetics.
+
+## Scales
+
++ scales are trained at draw time from the plot-level mapping and from every
+  layer's effective mapping (including layer data), so a scale works wherever it
+  sits in the `+` chain and constants never train a level
++ discrete rules are explicit: factor levels keep their order, character values
+  keep first-appearance order, `drop = FALSE` keeps unobserved factor levels,
+  named manual palettes match by name and an uncovered value maps to
+  `na.value` (with a warning) instead of being recycled
++ continuous rules are explicit: `limits` fixes the domain, `oob = "squish"`
+  (default) clamps and `oob = "censor"` maps to `na.value`, a zero-width domain
+  is widened, and an all-missing domain maps everything to `na.value`
++ `breaks` and `labels` control the colour bar and are shared with the layer
+  colours
++ new `bb_scale_fill_palette()`, `bb_scale_fill_manual()` and
+  `bb_scale_fill_gradient()`; `col` and `fill` no longer share a scale, so a
+  fill mapping uses the fill scale or the default fill mapping
++ facets train once on the full plot and share one colour domain
++ mapped `lty` is now applied by the line-like layers (`bb_line()`,
+  `bb_segment()`, `bb_errorbar()`, `bb_lm()`, `bb_boxplot()`), so the line
+  types in the legend match the drawing
+
+## Legends
+
++ legends are drawn from the same trained scale as the layers: a fill legend
+  uses filled boxes, a col legend the mapped colours and shapes
++ continuous colour bars use the scale palette, domain, breaks and labels, and
+  support `orientation = "horizontal"`
++ `outside = TRUE` places discrete legends and colour bars in a dedicated
+  layout column for both faceted and single plots, instead of a clipped inset
+
+## Fixes that follow from the unified coordinates
+
++ histograms and densities no longer mix their summary coordinates with the
+  mapped x/y when computing the canvas; a grouped histogram is scaled to the
+  tallest single group and a density over a discrete x puts the numeric
+  variable on the x axis
++ automatic axis labels follow the summary: counts for a histogram, density for
+  a density, and the analysed variable on x when x is discrete
+
+## Tests and documentation
+
++ new `test-scales.R` covers training across layers, factor/character order,
+  named and unnamed palettes, limits, unmatched levels, squish/censor, zero
+  width, missing domains, col/fill separation, symbol scales, legends inside and
+  outside at two device sizes, colour-bar breaks and shared facet domains
++ the vignette scale/legend section is rewritten around training, discrete and
+  continuous rules, fill scales and legend placement
++ `notes/0.3.0-scale-design.md` records the API decisions
+
 # plotbb 0.2.5
 
 This release fixes the grammar rather than adding layers: it states the rules a
@@ -73,7 +129,7 @@ user can rely on when composing a plot, and rewrites the vignette around them.
 + all layer help pages document `inherit`; `bbplot()` documents the `+` and
   inheritance rules; the vignette lists which aesthetics each layer maps
 + known limit, stated rather than hidden: a mapped `lty` is read by the legend
-  but not yet applied by the line-based layers (0.3.0 scale work)
+  but not yet applied by the line-based layers (a later scale revision)
 
 ## Tests
 

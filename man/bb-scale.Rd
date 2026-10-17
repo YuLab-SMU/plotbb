@@ -6,20 +6,60 @@
 \alias{bb_scale_col_gradient}
 \title{bb_scale_col_palette}
 \usage{
-bb_scale_col_palette(palette = NULL)
+bb_scale_col_palette(
+  palette = NULL,
+  limits = NULL,
+  na.value = "grey50",
+  drop = TRUE,
+  breaks = NULL,
+  labels = NULL
+)
 
-bb_scale_col_manual(values)
+bb_scale_col_manual(
+  values,
+  limits = NULL,
+  na.value = "grey50",
+  drop = TRUE,
+  breaks = NULL,
+  labels = NULL
+)
 
-bb_scale_col_gradient(low = "#132B43", high = "#56B1F7")
+bb_scale_col_gradient(
+  low = "#132B43",
+  high = "#56B1F7",
+  limits = NULL,
+  na.value = "grey50",
+  oob = c("squish", "censor"),
+  breaks = NULL,
+  labels = NULL
+)
 }
 \arguments{
 \item{palette}{color palette}
+
+\item{limits}{optional limits of the trained domain. Values outside the
+limits follow `oob`; levels outside the limits are not shown.}
+
+\item{na.value}{colour used for missing values and for values not covered by
+a discrete scale.}
+
+\item{drop}{whether unobserved factor levels are dropped from the trained
+scale and the legend.}
+
+\item{breaks}{optional breaks for a continuous colour bar. Defaults to
+`pretty()` on the trained domain.}
+
+\item{labels}{optional labels for the breaks (continuous) or a named vector
+renaming discrete levels.}
 
 \item{values}{colors for discrete scale.}
 
 \item{low}{low color for continuous scale.}
 
 \item{high}{high color for continuous scale.}
+
+\item{oob}{out-of-bounds behaviour for a continuous scale: `"squish"`
+(default) clamps to the limits, `"censor"` maps them to `na.value`.}
 }
 \value{
 A modified bbplot object

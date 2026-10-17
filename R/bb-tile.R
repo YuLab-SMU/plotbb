@@ -24,7 +24,13 @@ ly_tile <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
 
     ly <- function() {
         col <- params$fill %||% params$col
-        if (is.null(col)) col <- bb_col(mapping, data, plot = plot)
+        if (is.null(col)) {
+            col <- if (!is.null(mapping$fill)) {
+                bb_fill(mapping, data, plot = plot)
+            } else {
+                bb_col(mapping, data, plot = plot)
+            }
+        }
         if (is.null(col)) col <- rep(NA, length(x))
         if (length(col) == n) col <- col[ok]
         else if (length(col) == 1L) col <- rep(col, length(x))

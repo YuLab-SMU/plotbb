@@ -160,6 +160,12 @@ bb_call_canvas <- function(canvas, xlim = NULL, ylim = NULL) {
 ## boxplot does.
 bb_stat_values <- function(x, y = NULL) {
     if (is.numeric(x)) return(list(x = x, group = NULL))
+    ## An all-NA column read from a file is logical; it is still "the numeric
+    ## variable, with nothing in it" and should be skipped with a warning
+    ## rather than reported as a type error.
+    if (is.logical(x) && all(is.na(x))) {
+        return(list(x = as.numeric(x), group = NULL))
+    }
     if (is.null(y) || !is.numeric(y) || length(y) != length(x)) {
         bb_abort("a histogram or density needs a numeric variable: map a numeric ",
                  "`x`, or a discrete `x` with a numeric `y`.")
@@ -188,7 +194,7 @@ bb_discrete_levels <- function(x) {
     }
     chr <- as.character(x)
     chr <- chr[!is.na(chr)]
-    sort(unique(chr))
+    unique(chr)
 }
 
 bb_range_union <- function(rng, x) {
@@ -233,6 +239,58 @@ bb_expand_range <- function(rng, mult = 0.04) {
     }
     pad <- span * mult
     rng + c(-pad, pad)
+}
+
+## Layers whose drawing coordinates are computed from the data (counts, density,
+## fitted values) contribute their ranges through `bb_layer_limits()`; adding
+## their mapped x/y to the canvas instead would mix two coordinate systems.
+## Automatic axis labels for summary layers.
+##
+## A histogram puts counts on y; a density over a discrete x puts the numeric
+## variable on x and the density on y. The labels created by `bbplot()` follow
+## the mapping, so they are replaced only when they still say what the mapping
+## says; a label set by the user is kept.
+bb_summary_labs <- function(plot) {
+    if (is.null(plot$data) || is.null(plot$mapping)) return(plot)
+    layers <- Filter(function(o) inherits(o, "bb_layer"), plot$adds)
+    is_ly <- function(fun) any(vapply(layers, function(o) identical(o$layer, fun),
+                                      logical(1)))
+    dens <- is_ly(ly_density)
+    hist <- is_ly(ly_hist)
+    if (!dens && !hist) return(plot)
+
+    x_label <- if (!is.null(plot$mapping$x)) rlang::as_label(plot$mapping$x)
+    y_label <- if (!is.null(plot$mapping$y)) rlang::as_label(plot$mapping$y)
+
+    x_values <- eval_mapping(plot$mapping, "x", plot$data)
+    x_discrete <- !is.null(x_values) && !is.numeric(x_values)
+
+    auto_x <- is.null(plot$labs$xlab) || identical(plot$labs$xlab, x_label)
+    auto_y <- is.null(plot$labs$ylab) || identical(plot$labs$ylab, y_label)
+
+    if (x_discrete && !is.null(y_label)) {
+        if (auto_x) plot$labs$xlab <- y_label
+        if (auto_y) plot$labs$ylab <- if (dens) "density" else "count"
+    } else if (dens) {
+        if (auto_y) plot$labs$ylab <- "density"
+    } else if (hist) {
+        if (auto_y) plot$labs$ylab <- "count"
+    }
+    plot
+}
+
+bb_plot_summarises <- function(plot) {
+    any(vapply(plot$adds, function(obj) {
+        inherits(obj, "bb_layer") &&
+            (identical(obj$layer, ly_hist) || identical(obj$layer, ly_density))
+    }, logical(1)))
+}
+
+bb_layer_is_summary <- function(layer_obj) {
+    if (!inherits(layer_obj, "bb_layer")) return(FALSE)
+    summary_layers <- list(ly_hist, ly_density, ly_bar, ly_boxplot, ly_lm,
+                           ly_signif)
+    any(vapply(summary_layers, identical, logical(1), layer_obj$layer))
 }
 
 bb_layer_limits <- function(layer_obj, plot) {
@@ -420,13 +478,16 @@ bb_layer_limits <- function(layer_obj, plot) {
         if (!is.null(x) && is.numeric(x)) {
             grp <- bb_stat_group(values, mapping, data)
             if (is.null(grp)) {
-                d <- stats::density(x, na.rm = TRUE)
-                xlim <- bb_range_union(xlim, d$x)
-                ylim <- bb_range_union(ylim, c(0, d$y))
+                x <- x[is.finite(x)]
+                if (length(x) >= 2) {
+                    d <- stats::density(x, na.rm = TRUE)
+                    xlim <- bb_range_union(xlim, d$x)
+                    ylim <- bb_range_union(ylim, c(0, d$y))
+                }
             } else {
                 grp_chr <- as.character(grp)
                 for (g in unique(grp_chr[!is.na(grp_chr)])) {
-                    sub_x <- x[grp_chr == g]
+                    sub_x <- x[grp_chr == g & is.finite(x)]
                     if (length(sub_x) >= 2) {
                         d <- stats::density(sub_x, na.rm = TRUE)
                         xlim <- bb_range_union(xlim, d$x)
@@ -525,7 +586,13 @@ bb_plot_limits <- function(plot) {
     xlim <- NULL
     ylim <- NULL
 
-    if (!is.null(plot$data) && !is.null(plot$mapping)) {
+    ## Histograms and densities draw summary coordinates, not the mapped x/y:
+    ## a histogram puts counts on y, and a density over a discrete x puts the
+    ## numeric variable on x and the density on y. Adding the plot-level x/y
+    ## here would mix the two coordinate systems and flatten the panels.
+    summarises <- bb_plot_summarises(plot)
+
+    if (!summarises && !is.null(plot$data) && !is.null(plot$mapping)) {
         xy <- bb_eval_xy(plot$mapping, plot$data)
         xlim <- bb_range_union(xlim, xy$x)
         ylim <- bb_range_union(ylim, xy$y)
@@ -537,6 +604,8 @@ bb_plot_limits <- function(plot) {
     if (length(plot$adds)) {
         for (obj in plot$adds) {
             if (!inherits(obj, "bb_layer") || !is.data.frame(obj$data)) next
+            ## A summary layer's mapped y is data, not a coordinate.
+            if (bb_layer_is_summary(obj)) next
             mapping <- bb_layer_mapping(plot, obj)
             if (!length(mapping)) next
             xy <- bb_eval_xy(mapping, obj$data)
@@ -562,106 +631,34 @@ bb_plot_limits <- function(plot) {
 ##' @importFrom scales col_numeric
 ##' @importFrom scales col_factor
 bb_col <- function(mapping, data, plot = NULL, palette = NULL) {
-    col_var <- eval_mapping(mapping, 'col', data)
-    if (is.null(col_var)) return(NULL)
+    v <- eval_mapping(mapping, "col", data)
+    if (is.null(v)) return(NULL)
+    bb_map_aesthetic(plot, "col", v, palette = palette)
+}
 
-    if (!is.null(plot) && !is.null(plot$env) && exists("scales", envir = plot$env, inherits = FALSE)) {
-        scales <- get("scales", envir = plot$env, inherits = FALSE)
-        if (!is.null(scales$col)) {
-            return(bb_scale_col_map(scales$col, col_var))
-        }
-    }
-
-    if (!is.null(plot) && !is.null(plot$scales) && !is.null(plot$scales$col)) {
-        return(bb_scale_col_map(plot$scales$col, col_var))
-    }
-
-    palette <- bb_resolve_palette(plot, palette)
-
-    if (is.numeric(col_var)) {
-        if (is.null(palette)) palette <- "viridis"
-        f <- scales::col_numeric(palette, col_var)
-        col_vec <- f(col_var)
-    } else {
-        ucol <- sort(unique(as.character(col_var)))
-        if (is.null(palette)) palette <- "Set2"
-        if (is.character(palette) && length(palette) > 1) {
-            cols <- rep(palette, length.out = length(ucol))
-            if (!is.null(names(palette))) {
-                cols <- palette[ucol]
-            }
-            names(cols) <- ucol
-            col_vec <- cols[as.character(col_var)]
-        } else {
-            f <- scales::col_factor(palette, ucol)
-            cols <- f(ucol)
-            names(cols) <- ucol
-            col_vec <- cols[as.character(col_var)]
-        }
-    }
-    return(col_vec)
+bb_fill <- function(mapping, data, plot = NULL) {
+    v <- eval_mapping(mapping, "fill", data)
+    if (is.null(v)) return(NULL)
+    bb_map_aesthetic(plot, "fill", v)
 }
 
 bb_pch <- function(mapping, data, plot = NULL) {
     v <- eval_mapping(mapping, "pch", data)
     if (is.null(v)) return(NULL)
-
-    if (!is.null(plot) && !is.null(plot$env) && exists("scales", envir = plot$env, inherits = FALSE)) {
-        scales <- get("scales", envir = plot$env, inherits = FALSE)
-        if (!is.null(scales$pch)) {
-            out <- bb_scale_map(scales$pch, v)
-            if (!is.null(out)) return(out)
-        }
-    }
-
-    if (is.numeric(v)) return(as.integer(v))
-    lev <- bb_discrete_levels(v)
-    key <- as.character(v)
-    pal <- rep(1:25, length.out = length(lev))
-    names(pal) <- lev
-    unname(pal[key])
+    bb_map_aesthetic(plot, "pch", v)
 }
 
 bb_lty <- function(mapping, data, plot = NULL) {
     v <- eval_mapping(mapping, "lty", data)
     if (is.null(v)) return(NULL)
-
-    if (!is.null(plot) && !is.null(plot$env) && exists("scales", envir = plot$env, inherits = FALSE)) {
-        scales <- get("scales", envir = plot$env, inherits = FALSE)
-        if (!is.null(scales$lty)) {
-            out <- bb_scale_map(scales$lty, v)
-            if (!is.null(out)) return(out)
-        }
-    }
-
-    if (is.numeric(v)) return(v)
-    lev <- bb_discrete_levels(v)
-    key <- as.character(v)
-    pal <- rep(1:6, length.out = length(lev))
-    names(pal) <- lev
-    unname(pal[key])
+    bb_map_aesthetic(plot, "lty", v)
 }
 
 bb_cex <- function(mapping, data, plot = NULL) {
     v <- eval_mapping(mapping, "cex", data)
     if (is.null(v)) return(NULL)
-
-    if (!is.null(plot) && !is.null(plot$env) && exists("scales", envir = plot$env, inherits = FALSE)) {
-        scales <- get("scales", envir = plot$env, inherits = FALSE)
-        if (!is.null(scales$cex)) {
-            out <- bb_scale_map(scales$cex, v)
-            if (!is.null(out)) return(out)
-        }
-    }
-
-    if (is.numeric(v)) return(v)
-    lev <- bb_discrete_levels(v)
-    key <- as.character(v)
-    pal <- rep(c(0.8, 1.1, 1.4, 1.7), length.out = length(lev))
-    names(pal) <- lev
-    unname(pal[key])
+    bb_map_aesthetic(plot, "cex", v)
 }
-
 
 `%||%` <- function (a, b) {
     if (!is.null(a)) 

@@ -29,9 +29,10 @@ a replacement for base graphics and not a reimplementation of ggplot2: a
 way to say *what* a figure is made of — data, mappings, layers, scales, labels,
 facets — and a set of rules that make those pieces combine predictably.
 
-This release (0.2.5) is about the rules, not about new geometry. The vignette is
-therefore organised the way the grammar is meant to be learned rather than the
-way the functions are exported. Every section states a rule, shows it in a
+This release (0.3.0) unifies the scale and legend semantics: one trained scale
+per aesthetic, shared by the layers and the legend, with separate `col` and
+`fill` scales. The vignette is organised the way the grammar is meant to be
+learned rather than the way the functions are exported. Every section states a rule, shows it in a
 running example, and then says what the rule implies — including where it stops.
 The reference at the end lists the layers, the aesthetics they map, and the
 known limits, so that a future version can extend this document without
@@ -364,25 +365,55 @@ with_bb_theme(bb_theme_deepblue(), {
 
 ## Scales and legends
 
-Scales translate a mapped aesthetic into values. They apply to mappings only:
-a constant aesthetic is never sent through a scale. A scale therefore needs two
-pieces of information — the aesthetic it governs, and the data the layer would
-have mapped — and both come from the plot object. This is why the same scale can
-be reused across plots that share a mapping, and why adding a scale to a plot
-with no matching mapping has no visible effect: there is nothing for it to
-translate.
+A scale turns a mapped aesthetic into ink. It is trained from the data the plot
+draws, then used both by the layers and by the legend, so the two can never
+disagree about what a value looks like.
 
-Whether a mapping is treated as discrete or continuous follows the mapped
-values: `bb_aes(col = hp)` is numeric and gets a gradient, while
-`bb_aes(col = factor(cyl))` is discrete and gets one colour per level. Manual and
-paletted scales are for the discrete case; a gradient is for the continuous one.
+### Training
+
+Training happens when the plot is printed, not when a layer is added. It
+collects the mapped values from the plot-level mapping and from every layer's
+effective mapping — including layers that bring their own data — and stores the
+result in the scale. Two consequences matter in practice:
+
+* a scale works regardless of where it sits in the `+` chain, because all the
+  layers have already been seen when it is trained;
+* constants are removed from the mapping before training, so a constant colour
+  never contributes a level to the scale or the legend.
+
+Facets train once on the full plot and share the resulting domain: the same
+value gets the same colour in every panel. Free colour scales per panel are not
+supported.
+
+### Discrete scales
+
+For a discrete mapping, levels come from factor levels first (in factor order),
+then from character values in first-appearance order. `drop = TRUE` (the default)
+keeps only levels that occur in the data; `drop = FALSE` keeps all factor levels.
+A named manual palette matches by name, an unnamed one maps in level order, and
+a value that the scale does not cover maps to `na.value` with a warning instead
+of being silently recycled.
 
 ```{r plotbb-scale-manual}
 pal <- c(`4` = "#1b9e77", `6` = "#d95f02", `8` = "#7570b3")
 p + bb_point(pch = 19) + bb_scale_col_manual(pal) + bb_legend()
 ```
 
-Continuous colour mappings interpolate between two colours:
+`limits` restricts the trained domain: for a discrete scale it also defines
+which levels are shown.
+
+```{r plotbb-scale-limits}
+p + bb_point(pch = 19) +
+  bb_scale_col_manual(pal, limits = c("4", "6")) +
+  bb_legend()
+```
+
+### Continuous scales
+
+A continuous mapping interpolates between colours over a trained numeric domain.
+`limits` fixes the domain; `oob = "squish"` (the default) clamps values outside
+it, `oob = "censor"` maps them to `na.value`. A zero-width domain is widened by
+half a unit, and an all-missing domain leaves every value at `na.value`.
 
 ```{r plotbb-scale-gradient}
 bbplot(mtcars, bb_aes(mpg, disp, col = hp)) +
@@ -391,7 +422,33 @@ bbplot(mtcars, bb_aes(mpg, disp, col = hp)) +
   bb_legend(title = "horsepower")
 ```
 
-Other aesthetics have their own scales, and each needs its own legend:
+Breaks and labels are shared by the layer colours and the colour bar:
+
+```{r plotbb-scale-breaks}
+bbplot(mtcars, bb_aes(mpg, disp, col = hp)) +
+  bb_point(pch = 19) +
+  bb_scale_col_gradient(low = "grey85", high = "firebrick",
+                        breaks = c(100, 200, 300),
+                        labels = c("low", "mid", "high")) +
+  bb_legend(title = "horsepower", orientation = "horizontal",
+            position = "bottomright")
+```
+
+### Fill is its own aesthetic
+
+`col` and `fill` are separate aesthetics with separate scales. A layer that maps
+`fill` uses a fill scale if one is given and the default fill mapping otherwise;
+it no longer borrows the `col` scale. This makes the rule explicit and removable
+in one line: add a `bb_scale_fill_*()` scale.
+
+```{r plotbb-scale-fill}
+bbplot(mtcars, bb_aes(factor(cyl), mpg, fill = factor(cyl))) +
+  bb_density(alpha = 0.5) +
+  bb_scale_fill_manual(c(`4` = "#1b9e77", `6` = "#d95f02", `8` = "#7570b3")) +
+  bb_legend(aesthetic = "fill")
+```
+
+Other aesthetics have their own scales, and each legend names its aesthetic:
 
 ```{r plotbb-scale-aes}
 a <- bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl), pch = factor(gear), cex = hp)) +
@@ -408,8 +465,24 @@ b <- bbplot(mtcars, bb_aes(mpg, disp, group = gear, col = factor(gear))) +
 plot_list(a, b, ncol = 2, tag_levels = "A")
 ```
 
-`bb_legend()` can also be placed outside the panel, which is useful when the
-data fill the plotting region:
+A mapped line type is drawn by the line-like layers, not only shown in the
+legend:
+
+```{r plotbb-scale-lty}
+bbplot(mtcars, bb_aes(mpg, disp, group = gear, lty = factor(gear))) +
+  bb_lm(lwd = 2) +
+  bb_scale_lty_manual(c(`3` = "solid", `4` = "dashed", `5` = "dotted")) +
+  bb_legend(aesthetic = "lty", position = "topleft")
+```
+
+### Legend placement
+
+`bb_legend()` draws a discrete legend with `graphics::legend()` and a continuous
+colour bar with a dedicated function; both read the same trained scale as the
+layers. `orientation = "horizontal"` turns the colour bar, and `outside = TRUE`
+moves any legend into a dedicated layout column so it cannot cover the data. In
+a faceted plot an inside legend is repeated in each panel; `outside = TRUE`
+draws it once for the whole figure.
 
 ```{r plotbb-legend-outside}
 p + bb_point(pch = 19) + bb_legend(aesthetic = "col", outside = TRUE)
@@ -417,11 +490,8 @@ p + bb_point(pch = 19) + bb_legend(aesthetic = "col", outside = TRUE)
 
 The legend reads the plot's mapping and data. It describes the whole plot, not
 the last layer, so a layer with its own `col` mapping is still explained through
-the plot-level mapping and scale. This is a deliberate simplification for now:
-the legend is a property of the plot, not of a layer, and it is built from the
-plot-level mapping even when some layers override it. A per-layer legend is part
-of the 0.3.0 scale work, together with the `fill` and `lty` questions listed at
-the end.
+the plot-level mapping and scale. A per-layer legend is not part of this
+release; the `lty` limitation listed at the end is.
 
 ## Facets
 
@@ -718,9 +788,10 @@ package, tested, and used by every layer; the sections above show it in action.
    that survive validation.
 5. **Order is drawing order.** There is no other ordering; later layers cover
    earlier ones.
-6. **Scales translate mappings at draw time.** The last scale for an aesthetic
-   is the one in effect; constants never go through a scale. A legend describes
-   the plot-level mapping.
+6. **Scales translate mappings at draw time, once per aesthetic.** A scale is
+   trained from the plot and every layer, shared across facets, and used by both
+   the layers and the legend. `col` and `fill` are separate; constants never go
+   through a scale. A legend describes the plot-level mapping.
 7. **Themes are plot state, not device state.** They are applied while drawing
    and restored afterwards, also on error. Device-level themes are explicit and
    scoped.
@@ -786,16 +857,16 @@ trained by a scale:
 | Layer | Mapped aesthetics |
 | --- | --- |
 | `bb_point()` | `col`, `pch`, `cex` |
-| `bb_line()` | `col` |
+| `bb_line()` | `col`, `lty` |
 | `bb_text()` | `col`, `label` |
-| `bb_segment()` | `col` |
-| `bb_errorbar()` | `col` |
+| `bb_segment()` | `col`, `lty` |
+| `bb_errorbar()` | `col`, `lty` |
 | `bb_bar()` | `col` |
-| `bb_boxplot()` | `col` |
+| `bb_boxplot()` | `col`, `lty` |
 | `bb_hist()` | `col` |
 | `bb_density()` | `col`, `fill` |
 | `bb_tile()` | `col`, `fill` |
-| `bb_lm()` | `col` |
+| `bb_lm()` | `col`, `lty` |
 | `bb_signif()` | none (constant `col` only) |
 | `bb_layer()` | whatever the drawing function accepts (`col`, `fill`, `pch`, `lty`, `cex`, `label` are resolved) |
 
@@ -803,16 +874,19 @@ Components: `bb_facet_wrap()`, `bb_legend()`, `bb_labs()` (and `bb_title()`,
 `bb_sub()`, `bb_xlab()`, `bb_ylab()`), `bb_theme()` with the presets
 `bb_theme_expand()`, `bb_theme_grey()`, `bb_theme_deepblue()`,
 `bb_theme_bw()`, `bb_theme_minimal()`, and the scales `bb_scale_col_palette()`,
-`bb_scale_col_manual()`, `bb_scale_col_gradient()`, `bb_scale_pch_manual()`,
+`bb_scale_col_manual()`, `bb_scale_col_gradient()`, `bb_scale_fill_palette()`,
+`bb_scale_fill_manual()`, `bb_scale_fill_gradient()`, `bb_scale_pch_manual()`,
 `bb_scale_lty_manual()`, `bb_scale_cex_manual()`, `bb_scale_cex_continuous()`.
 
 ### Known limits
 
-* Colour scales are written for `col`. `fill` mappings reuse the `col` scale
-  path where a layer supports it; a dedicated `fill` scale is planned.
-* Mapped `lty` is read by the legend but not yet applied by the line-based
-  layers; pass `lty` as a constant to style a whole layer. Unifying it belongs
-  to the 0.3.0 scale work.
+* `col` and `fill` have separate scales. A `fill` mapping without a fill scale
+  uses the default fill mapping; it does not borrow the `col` scale.
+* Mapped `lty` applies to the line-like layers (`bb_line()`, `bb_segment()`,
+  `bb_errorbar()`, `bb_lm()` and `bb_boxplot()`). Layers without a line style
+  (points, tiles, bars) take `lty` as a constant only.
+* Facets share one trained colour domain; per-panel free colour scales are not
+  supported.
 * A custom layer contributes the ranges of its mapped `x`/`y` values and its
   `data` follows the facets. Coordinates it computes itself do not widen the
   axes unless declared with `limits`, and it does not extend the scales or the
@@ -821,4 +895,5 @@ Components: `bb_facet_wrap()`, `bb_legend()`, `bb_labs()` (and `bb_title()`,
   `aplot::plot_list()`.
 * Planned for later releases and therefore **not** part of this grammar:
   `bb_ribbon()`, `bb_hline()`, `bb_vline()`, `bb_violin()`, `bb_smooth()`,
-  `bb_facet_grid()`, `bb_build()`, `bb_save()`.
+  `bb_facet_grid()`, `bb_build()`, `bb_save()`, a per-layer legend and free
+  colour scales by facet.

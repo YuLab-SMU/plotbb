@@ -7,18 +7,31 @@
 \alias{bb_scale_cex_continuous}
 \title{aesthetic scales}
 \usage{
-bb_scale_pch_manual(values)
+bb_scale_pch_manual(values, limits = NULL, na.value = 1, drop = TRUE)
 
-bb_scale_lty_manual(values)
+bb_scale_lty_manual(values, limits = NULL, na.value = 1, drop = TRUE)
 
-bb_scale_cex_manual(values)
+bb_scale_cex_manual(values, limits = NULL, na.value = 1, drop = TRUE)
 
-bb_scale_cex_continuous(range = c(0.8, 1.6))
+bb_scale_cex_continuous(
+  range = c(0.8, 1.6),
+  limits = NULL,
+  na.value = 1,
+  oob = c("squish", "censor")
+)
 }
 \arguments{
 \item{values}{values used for mapping.}
 
+\item{limits}{optional limits of the trained domain.}
+
+\item{na.value}{value used for missing values.}
+
+\item{drop}{whether unobserved levels are dropped.}
+
 \item{range}{numeric length-2 range for continuous mapping.}
+
+\item{oob}{out-of-bounds behaviour, `"squish"` or `"censor"`.}
 }
 \value{
 A modified bbplot object

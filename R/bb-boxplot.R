@@ -13,10 +13,38 @@ bb_boxplot <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
     build_layer(mapping, data, inherit = inherit, ..., layer = ly_boxplot)
 }
 
+## One value per box, in the order the boxes are drawn.
+##
+## `boxplot()` orders boxes by factor levels (or by sorted values), not by the
+## first appearance of a group in the data, so a per-box aesthetic must be
+## reordered to match. Without this, a mapped line type or colour can land on
+## the wrong box.
+bb_box_values <- function(x, values, n) {
+    x <- rep(x, length.out = n)
+    values <- rep(values, length.out = n)
+    udata <- unique(data.frame(x = x, value = values,
+                               stringsAsFactors = FALSE))
+    if (is.factor(x)) {
+        ord <- order(match(as.character(udata$x), levels(x)))
+    } else if (is.numeric(x)) {
+        ord <- order(udata$x)
+    } else {
+        ord <- order(as.character(udata$x))
+    }
+    udata$value[ord]
+}
+
 ly_boxplot <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
     params <- list(...)
     mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+    ## A constant `fill` names the interior of the bars/boxes; after the
+    ## mapping has been resolved (so the constant also removes a mapped fill),
+    ## it becomes the `col` the base function understands.
+    if (is.null(params$col) && !is.null(params$fill)) {
+        params$col <- params$fill
+        params$fill <- NULL
+    }
 
     if (is.null(params$add)) params$add <- TRUE
     if (is.null(params$axes)) params$axes <- FALSE
@@ -43,16 +71,26 @@ ly_boxplot <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
 
         args <- params
 
-        if (!is.null(mapping$col)) {
-            col_vec <- bb_col(mapping, data, plot = plot)
+        if (!is.null(mapping$col) || !is.null(mapping$fill)) {
+            col_vec <- if (!is.null(mapping$fill)) {
+                bb_fill(mapping, data, plot = plot)
+            } else {
+                bb_col(mapping, data, plot = plot)
+            }
             col_vec <- rep(col_vec, length.out = n)[ok]
             if (!is.null(x)) {
-                x <- rep(x, length.out = n)
-                ## one colour per box, keyed by the x levels
-                udata <- unique(data.frame(x = as.character(x[ok]), col = col_vec))
-                args$col <- udata$col
+                args$col <- bb_box_values(x[ok], col_vec, length(col_vec))
             } else {
                 args$col <- unique(col_vec)[1]
+            }
+        }
+
+        if (is.null(params$lty) && !is.null(mapping$lty)) {
+            lty_vec <- rep(bb_lty(mapping, data, plot = plot), length.out = n)[ok]
+            if (!is.null(x)) {
+                args$lty <- bb_box_values(x[ok], lty_vec, length(lty_vec))
+            } else {
+                args$lty <- unique(lty_vec)[1]
             }
         }
 

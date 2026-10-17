@@ -53,6 +53,9 @@ ly_errorbar <- function(plot, mapping = NULL, data = NULL, orientation = "y", wi
             }
             args <- params
             if (!is.null(col_vec)) args$col <- col_vec
+            if (is.null(args$lty) && !is.null(mapping$lty)) {
+                args$lty <- bb_aes_subset(bb_lty(mapping, data, plot = plot), ok, n)
+            }
             do.call(graphics::segments, c(list(x0 = x, y0 = ymin, x1 = x, y1 = ymax), args))
             do.call(graphics::segments, c(list(x0 = x - width/2, y0 = ymin,
                                                x1 = x + width/2, y1 = ymin), args))
@@ -99,6 +102,9 @@ ly_errorbar <- function(plot, mapping = NULL, data = NULL, orientation = "y", wi
         }
         args <- params
         if (!is.null(col_vec)) args$col <- col_vec
+        if (is.null(args$lty) && !is.null(mapping$lty)) {
+            args$lty <- bb_aes_subset(bb_lty(mapping, data, plot = plot), ok, n)
+        }
         do.call(graphics::segments, c(list(x0 = xmin, y0 = y, x1 = xmax, y1 = y), args))
         do.call(graphics::segments, c(list(x0 = xmin, y0 = y - width/2,
                                            x1 = xmin, y1 = y + width/2), args))

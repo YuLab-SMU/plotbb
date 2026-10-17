@@ -12,6 +12,13 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
     data <- bb_layer_data(plot, data, mapping)
     params <- list(...)
     mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+    ## A constant `fill` names the interior of the bars/boxes; after the
+    ## mapping has been resolved (so the constant also removes a mapped fill),
+    ## it becomes the `col` the base function understands.
+    if (is.null(params$col) && !is.null(params$fill)) {
+        params$col <- params$fill
+        params$fill <- NULL
+    }
     if (is.null(data)) stop("bb_bar requires data")
 
     x_raw <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
@@ -47,7 +54,11 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
         col_per_bar <- NULL
         if (!is.null(mapping$col)) {
             col_var <- eval_mapping(mapping, "col", data)
-            col_vec <- bb_col(mapping, data, plot = plot)
+            col_vec <- if (!is.null(mapping$fill)) {
+                bb_fill(mapping, data, plot = plot)
+            } else {
+                bb_col(mapping, data, plot = plot)
+            }
             if (!is.null(col_var) && !is.null(col_vec)) {
                 col_vec <- bb_aes_subset(col_vec, !is.na(x_chr_all), length(x_raw))
                 col_map <- tapply(col_vec, x_chr_all[!is.na(x_chr_all)], function(z) z[[1]])
@@ -110,8 +121,14 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
     }
     y <- y_raw
 
-    col_vec <- if (is.null(params$col) && !is.null(mapping$col)) {
-        bb_col(mapping, data, plot = plot)
+    col_vec <- if (is.null(params$col)) {
+        if (!is.null(mapping$fill)) {
+            bb_fill(mapping, data, plot = plot)
+        } else if (!is.null(mapping$col)) {
+            bb_col(mapping, data, plot = plot)
+        } else {
+            NULL
+        }
     } else {
         NULL
     }

@@ -111,14 +111,15 @@ bbplot_add.bb_layer <- function(object, plot) {
     ly <- object$layer
 
     params_list <- object$params %||% list()
-    if (!is.null(params_list$fill) &&
-        !identical(ly, ly_custom) &&
-        !identical(ly, ly_density) &&
-        !identical(ly, ly_tile)) {
+    fill_layers <- list(ly_custom, ly_density, ly_tile, ly_bar, ly_boxplot,
+                        ly_hist, ly_lm)
+    fill_ok <- any(vapply(fill_layers, identical, logical(1), ly))
+    if (!is.null(params_list$fill) && !fill_ok) {
         bb_abort("`fill` is not an aesthetic of this layer: use `col` for its ",
                  "colour. `fill` is distinguished only where the drawing ",
                  "primitive has an interior separate from its border ",
-                 "(`bb_density()`, `bb_tile()` and a custom `bb_layer()`).")
+                 "(`bb_density()`, `bb_tile()`, `bb_bar()`, `bb_boxplot()`, ",
+                 "`bb_hist()`, the `bb_lm()` band and a custom `bb_layer()`).")
     }
     object$params <- NULL
     object$layer <- NULL

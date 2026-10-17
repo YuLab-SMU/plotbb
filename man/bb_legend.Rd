@@ -11,11 +11,13 @@ bb_legend(
   pch = 19,
   bty = "n",
   outside = FALSE,
+  orientation = c("vertical", "horizontal"),
   ...
 )
 }
 \arguments{
-\item{position}{legend position passed to \code{graphics::legend}.}
+\item{position}{legend position passed to \code{graphics::legend}, or a
+numeric x position for an outside legend.}
 
 \item{title}{legend title.}
 
@@ -26,6 +28,9 @@ bb_legend(
 \item{bty}{box type passed to \code{graphics::legend}.}
 
 \item{outside}{logical, whether to place the legend outside the plotting area.}
+
+\item{orientation}{orientation of a continuous colour bar,
+\code{"vertical"} or \code{"horizontal"}.}
 
 \item{...}{additional parameters passed to \code{graphics::legend}.}
 }

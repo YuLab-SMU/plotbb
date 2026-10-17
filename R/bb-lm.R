@@ -42,7 +42,12 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
             args$level <- NULL
             args$fill <- NULL
             args$alpha <- NULL
-            
+            if (is.null(args$lty) && !is.null(mapping$lty)) {
+                lty_values <- bb_lty(mapping, data, plot = plot)
+                lty_values <- unique(lty_values[!is.na(lty_values)])
+                if (length(lty_values)) args$lty <- lty_values[[1]]
+            }
+
             args$x0 <- d2$x0
             args$y0 <- d2$y0
             args$x1 <- d2$x1
@@ -65,6 +70,14 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
                 cols <- unname(col_map[as.character(ugrp)])
             }
         }
+        ltypes <- NULL
+        if (is.null(params$lty) && !is.null(mapping$lty)) {
+            lty_vec <- bb_lty(mapping, data, plot = plot)
+            if (!is.null(lty_vec)) {
+                lty_map <- tapply(lty_vec, as.character(grp), function(z) z[[1]])
+                ltypes <- unname(lty_map[as.character(ugrp)])
+            }
+        }
 
         d2_list <- lapply(ugrp, function(g) {
             d <- data[grp == g, ]
@@ -75,6 +88,7 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
         
         d2_list <- d2_list[keep]
         if (!is.null(cols)) cols <- cols[keep]
+        if (!is.null(ltypes)) ltypes <- ltypes[keep]
 
         for (i in seq_along(d2_list)) {
             d2 <- d2_list[[i]]
@@ -99,6 +113,7 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
             args$x1 <- d2$x1
             args$y1 <- d2$y1
             args$col <- c_col
+            if (!is.null(ltypes)) args$lty <- ltypes[i]
             
             do.call(graphics::segments, args)
         }

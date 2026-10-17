@@ -210,14 +210,16 @@ test_that("a constant fill colours a density layer", {
     ))
 })
 
-test_that("fill is only accepted where the layer has an interior", {
+test_that("fill is accepted only by layers that have an interior", {
     d <- data.frame(x = 1:3, y = 1:3)
     p <- bbplot(d, bb_aes(x, y))
 
-    expect_error(p + bb_boxplot(fill = "grey90"), "not an aesthetic")
-    expect_error(p + bb_hist(fill = "grey90"), "not an aesthetic")
     expect_error(p + bb_point(fill = "red"), "not an aesthetic")
+    expect_error(p + bb_line(fill = "red"), "not an aesthetic")
 
+    with_test_pdf(expect_silent(print(p + bb_boxplot(fill = "grey90"))))
+    with_test_pdf(expect_silent(print(p + bb_hist(fill = "grey90"))))
+    with_test_pdf(expect_silent(print(p + bb_bar(fill = "grey90"))))
     with_test_pdf(expect_silent(print(p + bb_tile(fill = "grey90"))))
     with_test_pdf(expect_silent(print(p + bb_density(fill = "steelblue"))))
 

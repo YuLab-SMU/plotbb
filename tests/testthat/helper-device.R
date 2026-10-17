@@ -1,9 +1,9 @@
 ## The 0.2.5 grammar contract: data/mapping inheritance, constants versus
 ## mappings, draw order, the custom-layer entry point and the boundary of `+`.
 
-with_test_pdf <- function(code) {
+with_test_pdf <- function(code, width = 7, height = 5) {
     f <- tempfile(fileext = ".pdf")
-    grDevices::pdf(f)
+    grDevices::pdf(f, width = width, height = height)
     on.exit({
         if (grDevices::dev.cur() > 1L) grDevices::dev.off()
         unlink(f)

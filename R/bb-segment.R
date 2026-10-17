@@ -54,6 +54,9 @@ ly_segment <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
             col_vec <- bb_aes_subset(bb_col(mapping, data, plot = plot), ok, n)
             args$col <- col_vec
         }
+        if (is.null(args$lty) && !is.null(mapping$lty)) {
+            args$lty <- bb_aes_subset(bb_lty(mapping, data, plot = plot), ok, n)
+        }
         do.call(graphics::segments, args)
         invisible(NULL)
     }

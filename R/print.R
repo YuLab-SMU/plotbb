@@ -21,6 +21,20 @@ print.bbplot <- function(x, ...) {
     if (length(x$theme)) {
         par(x$theme, no.readonly = TRUE)
     }
+
+    ## Training is a pure computation: it collects the mapped values from the
+    ## plot and from every layer and stores the trained domains in the scales.
+    x <- bb_train_scales(x)
+    x <- bb_summary_labs(x)
+
+    outside_legends <- Filter(
+        function(obj) inherits(obj, "bb_legend") && isTRUE(obj$outside),
+        x$adds
+    )
+    if (length(outside_legends)) {
+        graphics::layout(matrix(c(1, 2), nrow = 1), widths = c(4, 1.4))
+    }
+
     .bbplot <- get_plotbb_env()
     last_plot <- .bbplot$.last_plot
 
@@ -43,6 +57,18 @@ print.bbplot <- function(x, ...) {
 
     do.call(title, x$labs)
 
+    if (length(outside_legends)) {
+        graphics::par(mar = c(0, 0, 0, 0), xpd = NA)
+        graphics::plot.new()
+        for (j in seq_along(outside_legends)) {
+            legend_obj <- outside_legends[[j]]
+            legend_obj$outside <- FALSE
+            legend_obj$position <- 0.05
+            legend_obj$params$y <- 0.85 - (j - 1) * 0.25
+            bb_draw_legend(legend_obj, x)
+        }
+    }
+
     assign(".last_plot", x, envir = .bbplot)
     invisible(x)
 }
@@ -59,6 +85,9 @@ bb_print_facet <- function(x) {
     facet <- x$facet
     data <- x$data
     if (is.null(data)) stop("bb_facet_wrap requires plot data")
+
+    ## Train once on the full plot: every panel shares the same domain.
+    x <- bb_train_scales(x)
 
     facet_expr <- rlang::f_rhs(facet$facets)
     facet_vars <- all.vars(facet_expr)
@@ -161,6 +190,10 @@ bb_print_facet <- function(x) {
                 p <- p + obj
             }
         }
+        ## Re-adding the scale components above resets their domains; restore
+        ## the domains trained on the full data so all panels agree.
+        p <- bb_set_scales(p, bb_get_scales(x))
+        p <- bb_summary_labs(p)
 
         if (identical(scales, "fixed")) {
             lim <- lim_global
