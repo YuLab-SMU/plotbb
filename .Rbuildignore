@@ -11,3 +11,4 @@ README_files
 ^CRAN-SUBMISSION$
 notes/
 vignettes/plotbb.html
+^\.-00build\.log$
