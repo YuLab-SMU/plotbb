@@ -221,7 +221,9 @@ optionally with a confidence band. The fit method is never implicit: choose
 `method.args`, and control the band with `se` and `level`.
 
 `x` and `y` are mapped from the layer's data, `group` splits the fit, and a
-mapped `col` colours each curve. The confidence band uses `fill` (or the
+mapped `col` colours each curve. The `formula` response must be `y`; transform
+the data or the mapping rather than the response, so the band stays on the
+drawn scale. The confidence band uses `fill` (or the
 curve colour at low alpha). Small samples that cannot support the requested
 fit are reported with a warning and fall back to a linear fit; a group with
 fewer than two points is skipped. Fits are computed when the layer is added,

@@ -6,7 +6,9 @@
 ##' `method.args`, and control the band with `se` and `level`.
 ##'
 ##' `x` and `y` are mapped from the layer's data, `group` splits the fit, and a
-##' mapped `col` colours each curve. The confidence band uses `fill` (or the
+##' mapped `col` colours each curve. The `formula` response must be `y`; transform
+##' the data or the mapping rather than the response, so the band stays on the
+##' drawn scale. The confidence band uses `fill` (or the
 ##' curve colour at low alpha). Small samples that cannot support the requested
 ##' fit are reported with a warning and fall back to a linear fit; a group with
 ##' fewer than two points is skipped. Fits are computed when the layer is added,
@@ -25,6 +27,104 @@
 ##' @author Guangchuang Yu
 bb_smooth <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
     build_layer(mapping, data, inherit = inherit, ..., layer = ly_smooth)
+}
+
+bb_smooth_curves <- function(x, y, grp, method, formula, se, level,
+                                  n_grid, method_args) {
+    curves <- list()
+    for (g in sort(unique(grp))) {
+        idx <- grp == g
+        gx <- x[idx]
+        gy <- y[idx]
+        if (length(gx) < 2L) {
+            bb_warn("`bb_smooth()` skipped group '", g,
+                    "': it needs at least two points.")
+            next
+        }
+        fit_data <- data.frame(x = gx, y = gy)
+        grid <- seq(min(gx), max(gx), length.out = n_grid)
+        newdata <- data.frame(x = grid)
+        fit <- NULL
+        if (method == "loess") {
+            if (length(unique(gx)) < 4L) {
+                bb_warn("`bb_smooth()` group '", g, "' has too few distinct ",
+                        "x values for loess; using a linear fit.")
+                method_g <- "lm"
+            } else if (length(gx) < 6L) {
+                bb_warn("`bb_smooth()` group '", g, "' has too few points ",
+                        "for loess; using a linear fit.")
+                method_g <- "lm"
+            } else {
+                method_g <- "loess"
+            }
+            if (method_g == "loess") {
+                fit <- suppressWarnings(tryCatch(
+                    do.call(stats::loess,
+                            c(list(formula = formula, data = fit_data),
+                              method_args)),
+                    error = function(e) NULL
+                ))
+                if (is.null(fit)) {
+                    bb_warn("`bb_smooth()` could not fit loess for group '",
+                            g, "'; using a linear fit.")
+                }
+            }
+        } else {
+            method_g <- "lm"
+        }
+        if (is.null(fit)) {
+            fit <- tryCatch(
+                do.call(stats::lm,
+                        c(list(formula = formula, data = fit_data),
+                          method_args)),
+                error = function(e) NULL
+            )
+        }
+        if (is.null(fit)) {
+            bb_warn("`bb_smooth()` could not fit group '", g, "; skipped.")
+            next
+        }
+
+        pred <- tryCatch({
+            if (inherits(fit, "lm")) {
+                stats::predict(fit, newdata = newdata,
+                        interval = if (isTRUE(se)) "confidence" else "none",
+                        level = level)
+            } else {
+                stats::predict(fit, newdata = newdata, se = isTRUE(se))
+            }
+        }, error = function(e) NULL)
+        if (is.null(pred)) {
+            bb_warn("`bb_smooth()` could not predict group '", g,
+                    "; skipped.")
+            next
+        }
+        if (inherits(fit, "lm") && isTRUE(se)) {
+            lower <- pred[, "lwr"]
+            upper <- pred[, "upr"]
+            fitted <- pred[, "fit"]
+        } else if (inherits(fit, "loess") && isTRUE(se)) {
+            fitted <- pred$fit
+            df <- max(1, fit$n - fit$trace.hat)
+            tq <- stats::qt(1 - (1 - level) / 2, df)
+            lower <- fitted - tq * pred$se.fit
+            upper <- fitted + tq * pred$se.fit
+        } else {
+            fitted <- as.numeric(pred)
+            lower <- upper <- NULL
+        }
+
+        curves[[length(curves) + 1L]] <- list(
+            group = g,
+            grid = grid,
+            fitted = fitted,
+            lower = lower,
+            upper = upper
+        )
+    }
+
+
+    curves
 }
 
 ly_smooth <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
@@ -129,102 +229,39 @@ ly_smooth <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
         bb_abort("`formula` in `bb_smooth()` may only use the mapped `x` and ",
                  "`y`; got: ", paste(formula_vars, collapse = ", "), ".")
     }
+    if (!is.symbol(formula[[2]]) ||
+        !identical(as.character(formula[[2]]), "y")) {
+        bb_abort("the response of `formula` in `bb_smooth()` must be `y`; ",
+                 "transform the data or the mapping instead of the response.")
+    }
 
-    curves <- list()
-    for (g in sort(unique(grp))) {
-        idx <- grp == g
-        gx <- x[idx]
-        gy <- y[idx]
-        if (length(gx) < 2L) {
-            bb_warn("`bb_smooth()` skipped group '", g,
-                    "': it needs at least two points.")
-            next
-        }
-        fit_data <- data.frame(x = gx, y = gy)
-        grid <- seq(min(gx), max(gx), length.out = n_grid)
-        newdata <- data.frame(x = grid)
-        fit <- NULL
-        if (method == "loess") {
-            if (length(unique(gx)) < 4L) {
-                bb_warn("`bb_smooth()` group '", g, "' has too few distinct ",
-                        "x values for loess; using a linear fit.")
-                method_g <- "lm"
-            } else if (length(gx) < 6L) {
-                bb_warn("`bb_smooth()` group '", g, "' has too few points ",
-                        "for loess; using a linear fit.")
-                method_g <- "lm"
-            } else {
-                method_g <- "loess"
-            }
-            if (method_g == "loess") {
-                fit <- suppressWarnings(tryCatch(
-                    do.call(stats::loess,
-                            c(list(formula = formula, data = fit_data),
-                              method_args)),
-                    error = function(e) NULL
-                ))
-                if (is.null(fit)) {
-                    bb_warn("`bb_smooth()` could not fit loess for group '",
-                            g, "'; using a linear fit.")
-                }
-            }
-        } else {
-            method_g <- "lm"
-        }
-        if (is.null(fit)) {
-            fit <- tryCatch(
-                do.call(stats::lm,
-                        c(list(formula = formula, data = fit_data),
-                          method_args)),
-                error = function(e) NULL
-            )
-        }
-        if (is.null(fit)) {
-            bb_warn("`bb_smooth()` could not fit group '", g, "; skipped.")
-            next
-        }
-
-        pred <- tryCatch({
-            if (inherits(fit, "lm")) {
-                stats::predict(fit, newdata = newdata,
-                        interval = if (isTRUE(se)) "confidence" else "none",
-                        level = level)
-            } else {
-                stats::predict(fit, newdata = newdata, se = isTRUE(se))
-            }
-        }, error = function(e) NULL)
-        if (is.null(pred)) {
-            bb_warn("`bb_smooth()` could not predict group '", g,
-                    "; skipped.")
-            next
-        }
-        if (inherits(fit, "lm") && isTRUE(se)) {
-            lower <- pred[, "lwr"]
-            upper <- pred[, "upr"]
-            fitted <- pred[, "fit"]
-        } else if (inherits(fit, "loess") && isTRUE(se)) {
-            fitted <- pred$fit
-            df <- max(1, fit$n - fit$trace.hat)
-            tq <- stats::qt(1 - (1 - level) / 2, df)
-            lower <- fitted - tq * pred$se.fit
-            upper <- fitted + tq * pred$se.fit
-        } else {
-            fitted <- as.numeric(pred)
-            lower <- upper <- NULL
-        }
-
-        curves[[length(curves) + 1L]] <- list(
-            group = g,
-            grid = grid,
-            fitted = fitted,
-            lower = lower,
-            upper = upper,
-            col = colour_of(idx),
-            fill = fill_of(idx, colour_of(idx))
-        )
+    curves <- bb_smooth_curves(x, y, grp, method, formula, se, level,
+                                n_grid, method_args)
+    if (!length(curves)) return(invisible(NULL))
+    for (i in seq_along(curves)) {
+        idx <- grp == curves[[i]]$group
+        curves[[i]]$col <- colour_of(idx)
+        curves[[i]]$fill <- fill_of(idx, curves[[i]]$col)
     }
 
     if (!length(curves)) return(invisible(NULL))
+
+    ## Cache the drawn range on the plot environment, indexed by the layer's
+    ## position among the grammar layers, so computing the canvas does not fit
+    ## the model a second time.
+    band_x <- range(unlist(lapply(curves, `[[`, "grid")))
+    band_y <- range(unlist(lapply(curves, function(curve) {
+        c(curve$fitted, curve$lower, curve$upper)
+    })))
+    layer_index <- sum(vapply(plot$adds, inherits, logical(1), "bb_layer"))
+    cached <- if (exists("bb_layer_ranges", envir = plot$env,
+                         inherits = FALSE)) {
+        get("bb_layer_ranges", envir = plot$env, inherits = FALSE)
+    } else {
+        list()
+    }
+    cached[[layer_index]] <- list(x = band_x, y = band_y)
+    assign("bb_layer_ranges", cached, envir = plot$env)
 
     ly <- function() {
         for (curve in curves) {

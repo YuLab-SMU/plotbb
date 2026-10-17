@@ -50,6 +50,18 @@ test_that("bb_violin fill mapping and legend agree", {
     with_test_pdf(expect_silent(print(p)))
 })
 
+test_that("bb_violin includes the density support when trim = FALSE", {
+    set.seed(13)
+    d <- data.frame(g = rep(c("a", "b"), each = 30),
+                    y = c(rnorm(30), rnorm(30, 3)))
+    tight <- bb_build(bbplot(d, bb_aes(g, y)) +
+                          bb_violin(trim = TRUE))
+    wide <- bb_build(bbplot(d, bb_aes(g, y)) +
+                         bb_violin(trim = FALSE, bw = 2))
+    expect_lt(wide$limits$ylim[[1]], tight$limits$ylim[[1]])
+    expect_gt(wide$limits$ylim[[2]], tight$limits$ylim[[2]])
+})
+
 test_that("bb_violin works in facets", {
     set.seed(3)
     d <- data.frame(g = rep(c("a", "b"), 20),
@@ -127,6 +139,44 @@ test_that("bb_smooth supports a formula, facets and a mapped fill", {
     with_test_pdf(expect_silent(print(p)))
 })
 
+test_that("bb_smooth keeps the confidence band inside the ranges", {
+    set.seed(11)
+    d <- data.frame(x = 1:10,
+                    y = c(1, 1.2, 0.9, 1.1, 1, 1.3, 0.8, 1.2, 1.1, 1))
+    fit <- stats::lm(y ~ poly(x, 3), data = d)
+    pred <- stats::predict(fit,
+                           newdata = data.frame(x = seq(1, 10, length.out = 80)),
+                           interval = "confidence", level = 0.99)
+    built <- bb_build(bbplot(d, bb_aes(x, y)) + bb_point() +
+        bb_smooth(method = "lm", formula = y ~ poly(x, 3), se = TRUE,
+                  level = 0.99))
+    expect_lte(built$limits$ylim[[1]], min(pred[, "lwr"]))
+    expect_gte(built$limits$ylim[[2]], max(pred[, "upr"]))
+})
+
+test_that("bb_smooth does not refit when the plot is drawn", {
+    set.seed(12)
+    d <- data.frame(x = 1:40, y = sin(1:40 / 6) + rnorm(40, sd = 0.2))
+    p <- bbplot(d, bb_aes(x, y)) + bb_point() +
+        bb_smooth(method = "lm", se = TRUE)
+
+    rec <- new.env(); rec$fits <- 0L
+    options(plotbb.test.rec = rec)
+    trace("lm", where = asNamespace("stats"), tracer = quote({
+        .rec <- getOption("plotbb.test.rec")
+        .rec$fits <- .rec$fits + 1L
+    }), print = FALSE)
+    on.exit({
+        untrace("lm", where = asNamespace("stats"))
+        options(plotbb.test.rec = NULL)
+    }, add = TRUE)
+
+    with_test_pdf(print(p))
+    expect_equal(rec$fits, 0L)
+    bb_build(p)
+    expect_equal(rec$fits, 0L)
+})
+
 test_that("bb_smooth validates its parameters", {
     d <- data.frame(x = 1:10, y = rnorm(10))
     p <- bbplot(d, bb_aes(x, y))
@@ -138,6 +188,8 @@ test_that("bb_smooth validates its parameters", {
                  "at least 2")
     expect_error(with_test_pdf(print(p + bb_smooth(formula = y ~ z))),
                  "may only use")
+    expect_error(with_test_pdf(print(p + bb_smooth(formula = log(y) ~ x))),
+                 "must be `y`")
 })
 
 test_that("bb_violin validates its parameters", {
@@ -149,4 +201,10 @@ test_that("bb_violin validates its parameters", {
                  "between 0 and 1")
     expect_error(with_test_pdf(print(p + bb_violin(trim = NA))),
                  "TRUE or FALSE")
+    expect_error(with_test_pdf(print(p + bb_violin(n = 1))),
+                 "at least 2")
+    expect_error(with_test_pdf(print(p + bb_violin(kernel = "nope"))),
+                 "arg")
+    expect_error(with_test_pdf(print(p + bb_violin(bw = -1))),
+                 "positive number")
 })

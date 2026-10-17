@@ -283,11 +283,16 @@ bb_print_facet_grid <- function(x) {
         par(mfrow = c(nrow, ncol), oma = c(0, 0, top_oma, 0))
     }
 
+    row_lines <- unlist(strsplit(
+        vapply(specs, `[[`, "", "row_label"), "\n", fixed = TRUE
+    ))
+    right_mar <- max(4.5, 1 + max(nchar(row_lines), 1L) * 0.7)
+
     for (k in seq_along(specs)) {
         spec <- specs[[k]]
         top_lines <- max(1L, length(strsplit(spec$col_label, "\n",
                                              fixed = TRUE)[[1]]))
-        graphics::par(mar = c(4, 4, 2 + top_lines, 4.5))
+        graphics::par(mar = c(4, 4, 2 + top_lines, right_mar))
         p <- spec$plot
         p$labs$main <- if (spec$i == 1L) spec$col_label else NULL
         p$labs$sub <- NULL
@@ -296,7 +301,7 @@ bb_print_facet_grid <- function(x) {
         for (ly in p$layer) eval(ly())
         do.call(title, p$labs)
         if (spec$j == ncol && nzchar(spec$row_label)) {
-            graphics::mtext(spec$row_label, side = 4, line = 1, las = 0,
+            graphics::mtext(spec$row_label, side = 4, line = 1, las = 1,
                             cex = 0.9)
         }
     }

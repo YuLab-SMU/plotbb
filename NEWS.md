@@ -1,3 +1,34 @@
+# plotbb 0.8.1
+
+Bug fixes found while auditing the 0.6.0-0.8.0 features.
+
+## Ranges
+
++ `bb_smooth()` now includes its confidence band in the y range; the band range
+  is cached when the layer is added, so drawing and `bb_build()` do not refit
+  the model
++ `bb_violin(trim = FALSE)` includes the estimated density support in the y
+  range instead of clipping the tails
+
+## Validation
+
++ `bb_smooth()` rejects a formula whose response is not exactly `y` (for
+  example `log(y) ~ x`), which would otherwise draw the band on the wrong scale
++ `bb_violin()` validates `kernel`, `bw` and `n` instead of silently skipping
+  groups when the density cannot be estimated
+
+## Layout
+
++ long row labels in `bb_facet_grid()` are drawn horizontally and the right
+  margin now follows the longest wrapped label instead of clipping it
+
+## Documentation
+
++ the per-layer legend example groups the line so its colours actually match the
+  legend
++ known limits document that violin/boxplot use numeric group positions and that
+  a mapped `col`/`lty` on `bb_line()` applies to the whole polyline
+
 # plotbb 0.8.0
 
 This release closes the legend and colour-scale backlog.

@@ -298,6 +298,11 @@ bb_plot_summarises <- function(plot) {
     }, logical(1)))
 }
 
+bb_layer_position <- function(plot, layer_obj) {
+    objects <- Filter(function(obj) inherits(obj, "bb_layer"), plot$adds)
+    Position(function(obj) identical(obj, layer_obj), objects)
+}
+
 bb_layer_is_reference <- function(layer_obj) {
     if (!inherits(layer_obj, "bb_layer")) return(FALSE)
     any(vapply(list(ly_hline, ly_vline), identical, logical(1), layer_obj$layer))
@@ -496,6 +501,20 @@ bb_layer_limits <- function(layer_obj, plot) {
         if (!any(ok)) return(current())
         xlim <- bb_range_union(xlim, x[ok])
         ylim <- bb_range_union(ylim, y[ok])
+        cached <- if (exists("bb_layer_ranges", envir = plot$env,
+                             inherits = FALSE)) {
+            get("bb_layer_ranges", envir = plot$env, inherits = FALSE)
+        } else {
+            list()
+        }
+        idx <- bb_layer_position(plot, layer_obj)
+        if (!is.null(idx) && length(cached) >= idx) {
+            band <- cached[[idx]]
+            if (!is.null(band)) {
+                xlim <- bb_range_union(xlim, band$x)
+                ylim <- bb_range_union(ylim, band$y)
+            }
+        }
         return(list(xlim = xlim, ylim = ylim))
     }
 
@@ -520,6 +539,34 @@ bb_layer_limits <- function(layer_obj, plot) {
         xlim <- bb_range_union(xlim, pos[ok] - width / 2)
         xlim <- bb_range_union(xlim, pos[ok] + width / 2)
         ylim <- bb_range_union(ylim, y[ok])
+        ## With trim = FALSE the density support extends past the data, so the
+        ## range has to include the estimated support of every group.
+        trim <- layer_obj$params$trim %||% TRUE
+        if (isFALSE(trim)) {
+            params <- layer_obj$params %||% list()
+            bw <- params$bw
+            adjust <- params$adjust %||% 1
+            kernel <- params$kernel %||% "gaussian"
+            n_grid <- params$n %||% 512L
+            grp <- eval_mapping(mapping, "group", data)
+            if (is.null(grp) && !is.null(x)) {
+                grp <- as.character(rep(x, length.out = n))
+            }
+            grp <- if (is.null(grp)) rep("all", n) else
+                as.character(rep(grp, length.out = n))
+            gy <- rep(y, length.out = n)
+            for (g in sort(unique(grp))) {
+                values <- gy[grp == g & is.finite(gy)]
+                if (length(values) < 2L || stats::sd(values) == 0) next
+                args <- list(x = values, adjust = adjust, kernel = kernel,
+                             n = n_grid, trim = FALSE)
+                if (!is.null(bw)) args$bw <- bw
+                d <- suppressWarnings(tryCatch(
+                    do.call(stats::density, args), error = function(e) NULL
+                ))
+                if (!is.null(d)) ylim <- bb_range_union(ylim, d$x)
+            }
+        }
         return(list(xlim = xlim, ylim = ylim))
     }
 

@@ -507,7 +507,7 @@ layer_data <- data.frame(
 )
 bbplot(layer_data, bb_aes(x, y, col = h)) +
   bb_point() +
-  bb_line(bb_aes(col = g)) +
+  bb_line(bb_aes(group = g, col = g)) +
   bb_legend(layer = 2, title = "line grouping")
 ```
 
@@ -1194,3 +1194,11 @@ Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
   the default colour mapping is value-based and shared across panels.
 * A per-layer legend selects the mapping/title of one layer but still uses the
   shared trained scale; it is not a second colour domain.
+* `bb_violin()` and `bb_boxplot()` place groups at 1, 2, 3, ... and draw numeric
+  axis labels there; the factor labels are not written under the positions.
+* `bb_smooth()` accepts a formula whose response is exactly `y`; transform the
+  data or the mapping rather than the response, so the band stays on the drawn
+  scale.
+* A mapped `col`/`lty` on `bb_line()` applies one value to the whole polyline; a
+  polyline cannot change colour halfway. Add a `group` mapping to draw one line
+  per group.

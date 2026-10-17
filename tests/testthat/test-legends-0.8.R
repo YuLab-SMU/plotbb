@@ -17,7 +17,7 @@ test_that("a legend can describe one layer's mapping", {
 
     p <- bbplot(d, bb_aes(x, y, col = h)) +
         bb_point() +
-        bb_line(bb_aes(col = g)) +
+        bb_line(bb_aes(group = g, col = g)) +
         bb_legend(layer = 2, aesthetic = "col")
     with_test_pdf(print(p))
     expect_true(any(rec$titles == "g"))
@@ -109,6 +109,30 @@ test_that("free colour scales handle empty panels", {
     with_test_pdf(expect_silent(print(p)))
     built <- bb_build(p)
     expect_equal(vapply(built$panels, `[[`, 0L, "n"), c(3L, 3L, 0L))
+})
+
+test_that("grid free colour supports inside legends and rejects outside ones", {
+    d <- data.frame(x = 1:8, y = 1:8,
+                    r = rep(c("r1", "r2"), each = 4),
+                    cc = rep(c("c1", "c2"), 4),
+                    g = factor(rep(c("u", "v"), 4)))
+    p <- bbplot(d, bb_aes(x, y, col = g)) + bb_point() +
+        bb_scale_col_manual(c(u = "red", v = "blue")) +
+        bb_facet_grid(rows = ~r, cols = ~cc, free_colour = TRUE) +
+        bb_legend(position = "topright")
+    with_test_pdf(expect_silent(print(p)))
+    outside <- p + bb_legend(position = "right", outside = TRUE)
+    expect_error(with_test_pdf(print(outside)), "outside legend")
+})
+
+test_that("grid row labels account for long wrapped labels", {
+    d <- data.frame(x = 1:12, y = 1:12,
+                    r = rep(c("a very long row label one",
+                              "a very long row label two"), each = 6),
+                    cc = rep(c("c1", "c2"), 6))
+    p <- bbplot(d, bb_aes(x, y)) + bb_point() +
+        bb_facet_grid(rows = ~r, cols = ~cc, strip_width = 10)
+    with_test_pdf(expect_silent(print(p)))
 })
 
 test_that("free colour scales work in a facet grid", {

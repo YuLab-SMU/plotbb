@@ -34,7 +34,9 @@ ly_violin <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
 
     width <- params$width %||% 0.9
     adjust <- params$adjust %||% 1
-    kernel <- params$kernel %||% "gaussian"
+    kernel <- match.arg(params$kernel %||% "gaussian",
+                        c("gaussian", "epanechnikov", "rectangular",
+                          "triangular", "biweight", "cosine", "optcosine"))
     trim <- params$trim %||% TRUE
     if (!is.logical(trim) || length(trim) != 1L || is.na(trim)) {
         bb_abort("`trim` in `bb_violin()` must be TRUE or FALSE.")
@@ -43,6 +45,18 @@ ly_violin <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     bw <- params$bw
     alpha <- params$alpha %||% 1
     border <- params$border %||% NA
+
+    if (!is.numeric(n_grid) || length(n_grid) != 1L || n_grid < 2 ||
+        n_grid != as.integer(n_grid)) {
+        bb_abort("`n` in `bb_violin()` must be an integer of at least 2.")
+    }
+    n_grid <- as.integer(n_grid)
+    if (!is.null(bw)) {
+        if (!is.numeric(bw) || length(bw) != 1L || !is.finite(bw) ||
+            bw <= 0) {
+            bb_abort("`bw` in `bb_violin()` must be a positive number or NULL.")
+        }
+    }
 
     for (nm in c("width", "adjust")) {
         value <- get(nm)
