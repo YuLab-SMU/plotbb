@@ -19,11 +19,11 @@ the supported layers are redrawn with x/y swapped.
 
 Supported layers are `bb_point()`, `bb_line()`, `bb_text()`,
 `bb_segment()`, `bb_tile()`, `bb_layer()`, `bb_violin()`, `bb_boxplot()`,
-`bb_bar()` and `bb_errorbar()` (the last four switch to the opposite
-`orientation`), plus constant or mapped `bb_hline()`/`bb_vline()` (which
-become the other reference line). Layers that have no orientation model
-(density, histogram, ribbon, smooth, lm, signif) raise an error rather than
-drawing in the wrong orientation.
+`bb_bar()`, `bb_errorbar()`, `bb_ribbon()`, `bb_density()`, `bb_hist()` and
+`bb_smooth()` (these switch to the opposite `orientation`), plus constant or
+mapped `bb_hline()`/`bb_vline()` (which become the other reference line).
+Layers that have no orientation model (`bb_lm()`, `bb_signif()`) raise an
+error rather than drawing in the wrong orientation.
 }
 \author{
 Guangchuang Yu

@@ -21,7 +21,7 @@ test_that("coord_flip flips violin and boxplot", {
 
 test_that("coord_flip refuses layers without an orientation", {
     d <- data.frame(x = 1:10, y = 1:10)
-    p <- bbplot(d, bb_aes(x, y)) + bb_density() + bb_coord_flip()
+    p <- bbplot(d, bb_aes(x, y)) + bb_lm() + bb_coord_flip()
     expect_error(with_test_pdf(print(p)), "does not support")
 })
 

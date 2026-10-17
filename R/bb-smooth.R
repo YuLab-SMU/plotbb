@@ -18,6 +18,9 @@
 ##' @rdname layer
 ##' @param mapping aesthetic mapping
 ##' @param data layer data
+##' @param orientation `"vertical"` (default; fit y against x) or
+##'   `"horizontal"` (fit x against y). A horizontal formula is written in the
+##'   mapped variables (`x ~ y`) and is converted internally.
 ##' @param ... additional parameters: `method` ("loess" or "lm"), `formula`
 ##'   (default `y ~ x`), `se`, `level`, `n` (prediction grid size),
 ##'   `method.args`, `alpha`, `col`/`fill`/`lty`/`lwd`.
@@ -25,8 +28,24 @@
 ##' @importFrom graphics polygon lines
 ##' @export
 ##' @author Guangchuang Yu
-bb_smooth <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
-    build_layer(mapping, data, inherit = inherit, ..., layer = ly_smooth)
+bb_smooth <- function(mapping = NULL, data = NULL, inherit = TRUE,
+                      orientation = c("vertical", "horizontal"), ...) {
+    orientation <- match.arg(orientation)
+    build_layer(mapping, data, inherit = inherit, orientation = orientation,
+                ..., layer = ly_smooth)
+}
+
+bb_swap_formula_xy <- function(expr) {
+    if (is.symbol(expr)) {
+        name <- as.character(expr)
+        if (identical(name, "x")) return(as.name("y"))
+        if (identical(name, "y")) return(as.name("x"))
+        return(expr)
+    }
+    if (is.call(expr)) {
+        for (i in seq_along(expr)[-1L]) expr[[i]] <- bb_swap_formula_xy(expr[[i]])
+    }
+    expr
 }
 
 bb_smooth_curves <- function(x, y, grp, method, formula, se, level,
@@ -131,9 +150,22 @@ ly_smooth <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
     params <- list(...)
     mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+    orientation <- params$orientation %||% "vertical"
+    params$orientation <- NULL
+    if (!orientation %in% c("vertical", "horizontal")) {
+        bb_abort("`orientation` in `bb_smooth()` must be 'vertical' or ",
+                 "'horizontal'.")
+    }
 
     method <- match.arg(params$method %||% "loess", c("loess", "lm"))
-    formula <- params$formula %||% stats::as.formula("y ~ x")
+    formula <- params$formula %||% stats::as.formula(
+        if (identical(orientation, "horizontal")) "x ~ y" else "y ~ x"
+    )
+    if (identical(orientation, "horizontal")) {
+        lhs <- paste(deparse(bb_swap_formula_xy(formula[[2]])), collapse = "")
+        rhs <- paste(deparse(bb_swap_formula_xy(formula[[3]])), collapse = "")
+        formula <- stats::as.formula(paste(lhs, "~", rhs))
+    }
     if (!inherits(formula, "formula")) {
         bb_abort("`formula` in `bb_smooth()` must be a formula.")
     }
@@ -229,7 +261,9 @@ ly_smooth <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
                  "transform the data or the mapping instead of the response.")
     }
 
-    curves <- bb_smooth_curves(x, y, grp, method, formula, se, level,
+    fit_x <- if (identical(orientation, "horizontal")) y else x
+    fit_y <- if (identical(orientation, "horizontal")) x else y
+    curves <- bb_smooth_curves(fit_x, fit_y, grp, method, formula, se, level,
                                 n_grid, method_args)
     if (!length(curves)) return(invisible(NULL))
     for (i in seq_along(curves)) {
@@ -254,21 +288,37 @@ ly_smooth <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     } else {
         list()
     }
-    cached[[layer_index]] <- list(x = band_x, y = band_y)
+    cached[[layer_index]] <- if (identical(orientation, "horizontal")) {
+        list(x = band_y, y = band_x)
+    } else {
+        list(x = band_x, y = band_y)
+    }
     assign("bb_layer_ranges", cached, envir = plot$env)
 
     ly <- function() {
         for (curve in curves) {
             if (!is.null(curve$lower) && !is.null(curve$upper)) {
-                poly_x <- c(curve$grid, rev(curve$grid))
-                poly_y <- c(curve$lower, rev(curve$upper))
+                if (identical(orientation, "horizontal")) {
+                    poly_x <- c(curve$lower, rev(curve$upper))
+                    poly_y <- c(curve$grid, rev(curve$grid))
+                } else {
+                    poly_x <- c(curve$grid, rev(curve$grid))
+                    poly_y <- c(curve$lower, rev(curve$upper))
+                }
                 do.call(graphics::polygon,
                         list(x = poly_x, y = poly_y,
                              col = scales::alpha(curve$fill, alpha),
                              border = NA))
             }
+            if (identical(orientation, "horizontal")) {
+                line_x <- curve$fitted
+                line_y <- curve$grid
+            } else {
+                line_x <- curve$grid
+                line_y <- curve$fitted
+            }
             do.call(graphics::lines,
-                    list(x = curve$grid, y = curve$fitted,
+                    list(x = line_x, y = line_y,
                          col = curve$col,
                          lty = params$lty %||% 1,
                          lwd = params$lwd %||% 1))

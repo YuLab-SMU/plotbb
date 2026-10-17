@@ -41,7 +41,13 @@ bb_boxplot(
   ...
 )
 
-bb_density(mapping = NULL, data = NULL, inherit = TRUE, ...)
+bb_density(
+  mapping = NULL,
+  data = NULL,
+  inherit = TRUE,
+  orientation = c("vertical", "horizontal"),
+  ...
+)
 
 bb_errorbar(
   mapping = NULL,
@@ -52,7 +58,13 @@ bb_errorbar(
   ...
 )
 
-bb_hist(mapping = NULL, data = NULL, inherit = TRUE, ...)
+bb_hist(
+  mapping = NULL,
+  data = NULL,
+  inherit = TRUE,
+  orientation = c("vertical", "horizontal"),
+  ...
+)
 
 bb_line(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
@@ -104,7 +116,13 @@ bb_segment(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
 bb_signif(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
-bb_smooth(mapping = NULL, data = NULL, inherit = TRUE, ...)
+bb_smooth(
+  mapping = NULL,
+  data = NULL,
+  inherit = TRUE,
+  orientation = c("vertical", "horizontal"),
+  ...
+)
 
 bb_text(mapping = NULL, data = NULL, inherit = TRUE, ...)
 

@@ -4,13 +4,36 @@
 ##' @rdname layer
 ##' @param mapping aesthetic mapping
 ##' @param data layer data
+##' @param orientation `"vertical"` (default; density on y) or `"horizontal"`
+##'   (density on x). A horizontal density estimates `y`, or `x` when `y` is a
+##'   discrete group.
 ##' @param ... addition parameter for the layer, such as \code{adjust}, \code{kernel}.
 ##' @return A modified bbplot object
 ##' @importFrom stats density
 ##' @export
 ##' @author Guangchuang Yu
-bb_density <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
-    build_layer(mapping, data, inherit = inherit, ..., layer = ly_density)
+bb_density <- function(mapping = NULL, data = NULL, inherit = TRUE,
+                       orientation = c("vertical", "horizontal"), ...) {
+    orientation <- match.arg(orientation)
+    build_layer(mapping, data, inherit = inherit, orientation = orientation,
+                ..., layer = ly_density)
+}
+
+## The value whose density is estimated. Vertical uses x (or y when x is a
+## discrete group); horizontal uses y (or x when y is a discrete group).
+bb_density_values <- function(mapping, data, orientation) {
+    x <- eval_mapping(mapping, "x", data)
+    y <- eval_mapping(mapping, "y", data)
+    if (identical(orientation, "horizontal")) {
+        if (is.numeric(y)) {
+            group <- if (!is.null(x) && !is.numeric(x)) x else NULL
+            return(list(x = y, group = group))
+        }
+        if (is.numeric(x)) return(list(x = x, group = y))
+        bb_abort("a horizontal density needs a numeric `y`, or a numeric `x` ",
+                 "with a discrete `y`.")
+    }
+    bb_stat_values(x, y)
 }
 
 ## Fill colour of a polygon layer.
@@ -29,18 +52,21 @@ ly_density <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
     params <- list(...)
     mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
-
+    orientation <- params$orientation %||% "vertical"
+    params$orientation <- NULL
+    if (!orientation %in% c("vertical", "horizontal")) {
+        bb_abort("`orientation` in `bb_density()` must be 'vertical' or ",
+                 "'horizontal'.")
+    }
 
     ly <- function() {
-        if (is.null(mapping$x)) return(invisible(NULL))
+        if (is.null(mapping$x) && is.null(mapping$y)) return(invisible(NULL))
 
-        x_raw <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
-        y_raw <- eval_mapping(mapping, "y", data)
-        if (is.null(x_raw)) {
-            bb_abort("`bb_density()` requires an `x` mapping.")
-        }
-        values <- bb_stat_values(x_raw, y_raw)
+        values <- bb_density_values(mapping, data, orientation)
         x_raw <- values$x
+        if (is.null(x_raw)) {
+            bb_abort("`bb_density()` requires a numeric variable to estimate.")
+        }
 
         grp <- bb_stat_group(values, mapping, data)
 
@@ -59,7 +85,13 @@ ly_density <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
             col <- bb_density_colour(params, mapping, data, plot) %||% "black"
             if (length(col) > 0) col <- col[1]
 
-            graphics::polygon(c(min(d$x), d$x, max(d$x)), c(0, d$y, 0), col = scales::alpha(col, alpha), border = col)
+            if (identical(orientation, "horizontal")) {
+                graphics::polygon(c(0, d$y, 0), c(min(d$x), d$x, max(d$x)),
+                                  col = scales::alpha(col, alpha), border = col)
+            } else {
+                graphics::polygon(c(min(d$x), d$x, max(d$x)), c(0, d$y, 0),
+                                  col = scales::alpha(col, alpha), border = col)
+            }
         } else {
             grp_chr <- as.character(grp)
             keep <- !is.na(grp_chr) & is.finite(x_raw)
@@ -102,7 +134,17 @@ ly_density <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
                                     adjust = args$adjust %||% 1,
                                     kernel = args$kernel %||% "gaussian")
                 c_col <- col_map[i]
-                graphics::polygon(c(min(d$x), d$x, max(d$x)), c(0, d$y, 0), col = scales::alpha(c_col, alpha), border = c_col)
+                if (identical(orientation, "horizontal")) {
+                    graphics::polygon(c(0, d$y, 0),
+                                      c(min(d$x), d$x, max(d$x)),
+                                      col = scales::alpha(c_col, alpha),
+                                      border = c_col)
+                } else {
+                    graphics::polygon(c(min(d$x), d$x, max(d$x)),
+                                      c(0, d$y, 0),
+                                      col = scales::alpha(c_col, alpha),
+                                      border = c_col)
+                }
             }
         }
     }

@@ -323,20 +323,37 @@ bb_summary_labs <- function(plot) {
 
     x_label <- if (!is.null(plot$mapping$x)) rlang::as_label(plot$mapping$x)
     y_label <- if (!is.null(plot$mapping$y)) rlang::as_label(plot$mapping$y)
+    stat_label <- if (dens) "density" else "count"
+
+    orientation <- "vertical"
+    for (obj in layers) {
+        if (identical(obj$layer, ly_density) || identical(obj$layer, ly_hist)) {
+            orientation <- obj$params$orientation %||% "vertical"
+            break
+        }
+    }
 
     x_values <- eval_mapping(plot$mapping, "x", plot$data)
+    y_values <- eval_mapping(plot$mapping, "y", plot$data)
     x_discrete <- !is.null(x_values) && !is.numeric(x_values)
+    y_discrete <- !is.null(y_values) && !is.numeric(y_values)
 
     auto_x <- is.null(plot$labs$xlab) || identical(plot$labs$xlab, x_label)
     auto_y <- is.null(plot$labs$ylab) || identical(plot$labs$ylab, y_label)
 
-    if (x_discrete && !is.null(y_label)) {
+    if (identical(orientation, "horizontal")) {
+        if (y_discrete && !is.null(y_label)) {
+            if (auto_x) plot$labs$xlab <- stat_label
+            if (auto_y) plot$labs$ylab <- y_label
+        } else {
+            if (auto_x) plot$labs$xlab <- stat_label
+            if (auto_y) plot$labs$ylab <- y_label
+        }
+    } else if (x_discrete && !is.null(y_label)) {
         if (auto_x) plot$labs$xlab <- y_label
-        if (auto_y) plot$labs$ylab <- if (dens) "density" else "count"
-    } else if (dens) {
-        if (auto_y) plot$labs$ylab <- "density"
-    } else if (hist) {
-        if (auto_y) plot$labs$ylab <- "count"
+        if (auto_y) plot$labs$ylab <- stat_label
+    } else {
+        if (auto_y) plot$labs$ylab <- stat_label
     }
     plot
 }
@@ -699,57 +716,67 @@ bb_layer_limits <- function(layer_obj, plot) {
     }
 
     if (identical(ly, ly_hist)) {
-        x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
-        y <- eval_mapping(mapping, "y", data)
-        if (is.null(x)) return(current())
-        values <- bb_stat_values(x, y)
-        keep <- is.finite(values$x)
-        x <- values$x[keep]
-        if (length(x) < 2) return(current())
-
-        ## Grouped histograms share one break grid, so the panel has to cover the
-        ## tallest single group rather than the pooled counts.
+        params <- layer_obj$params %||% list()
+        orientation <- params$orientation %||% "vertical"
+        values <- bb_hist_values(mapping, data, orientation)
+        value <- values$x
+        if (is.null(value) || !is.numeric(value)) return(current())
         grp <- bb_stat_group(values, mapping, data)
-        group <- if (is.null(grp)) rep("all", length(x)) else
+        keep <- is.finite(value)
+        value <- value[keep]
+        if (length(value) < 2L) return(current())
+        group <- if (is.null(grp)) rep("all", length(value)) else
             as.character(rep(grp, length.out = length(values$x))[keep])
-        breaks <- layer_obj$params$breaks %||% "Sturges"
-        all_breaks <- graphics::hist(x, breaks = breaks, plot = FALSE)$breaks
+        breaks <- params$breaks %||% "Sturges"
+        all_breaks <- graphics::hist(value, breaks = breaks, plot = FALSE)$breaks
+        probability <- isTRUE(params$probability) ||
+            (!is.null(params$freq) && !isTRUE(params$freq))
+        heights <- function(h) if (probability) h$density else h$counts
         for (g in unique(group[!is.na(group)])) {
-            sub_x <- x[group == g]
-            if (length(sub_x) < 2) next
-            h <- graphics::hist(sub_x, breaks = all_breaks, plot = FALSE)
-            xlim <- bb_range_union(xlim, h$breaks)
-            ylim <- bb_range_union(ylim, c(0, h$counts))
+            sub <- value[group == g]
+            if (length(sub) < 2L) next
+            h <- graphics::hist(sub, breaks = all_breaks, plot = FALSE)
+            if (identical(orientation, "horizontal")) {
+                xlim <- bb_range_union(xlim, c(0, heights(h)))
+                ylim <- bb_range_union(ylim, all_breaks)
+            } else {
+                xlim <- bb_range_union(xlim, all_breaks)
+                ylim <- bb_range_union(ylim, c(0, heights(h)))
+            }
         }
         return(list(xlim = xlim, ylim = ylim))
     }
 
     if (identical(ly, ly_density)) {
-        x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
-        y <- eval_mapping(mapping, "y", data)
-        if (!is.null(x)) {
-            values <- bb_stat_values(x, y)
-            x <- values$x
+        orientation <- (layer_obj$params %||% list())$orientation %||% "vertical"
+        values <- bb_density_values(mapping, data, orientation)
+        value <- values$x
+        if (is.null(value) || !is.numeric(value)) return(current())
+        grp <- bb_stat_group(values, mapping, data)
+        add_density <- function(sub) {
+            sub <- sub[is.finite(sub)]
+            if (length(sub) < 2L) return(NULL)
+            stats::density(sub, na.rm = TRUE)
         }
-        if (!is.null(x) && is.numeric(x)) {
-            grp <- bb_stat_group(values, mapping, data)
-            if (is.null(grp)) {
-                x <- x[is.finite(x)]
-                if (length(x) >= 2) {
-                    d <- stats::density(x, na.rm = TRUE)
-                    xlim <- bb_range_union(xlim, d$x)
-                    ylim <- bb_range_union(ylim, c(0, d$y))
-                }
+        densities <- if (is.null(grp)) {
+            d <- add_density(value)
+            if (is.null(d)) list() else list(d)
+        } else {
+            grp_chr <- as.character(grp)
+            out <- list()
+            for (g in unique(grp_chr[!is.na(grp_chr)])) {
+                d <- add_density(value[grp_chr == g])
+                if (!is.null(d)) out[[length(out) + 1L]] <- d
+            }
+            out
+        }
+        for (d in densities) {
+            if (identical(orientation, "horizontal")) {
+                xlim <- bb_range_union(xlim, c(0, d$y))
+                ylim <- bb_range_union(ylim, d$x)
             } else {
-                grp_chr <- as.character(grp)
-                for (g in unique(grp_chr[!is.na(grp_chr)])) {
-                    sub_x <- x[grp_chr == g & is.finite(x)]
-                    if (length(sub_x) >= 2) {
-                        d <- stats::density(sub_x, na.rm = TRUE)
-                        xlim <- bb_range_union(xlim, d$x)
-                        ylim <- bb_range_union(ylim, c(0, d$y))
-                    }
-                }
+                xlim <- bb_range_union(xlim, d$x)
+                ylim <- bb_range_union(ylim, c(0, d$y))
             }
         }
         return(list(xlim = xlim, ylim = ylim))

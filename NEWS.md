@@ -1,3 +1,26 @@
+# plotbb 0.13.0
+
+Horizontal density, histogram and smooth layers complete the coord-flip story.
+
+## Horizontal statistical layers
+
++ `bb_density(orientation = "horizontal")` draws the density on x and the
+  estimated values on y; `bb_hist(orientation = "horizontal")` puts counts on x
++ `bb_smooth(orientation = "horizontal")` fits `x` against `y`, draws the curve
+  and confidence band sideways, and converts a supplied formula written in the
+  mapped variables
++ summary labels follow the orientation (density/count on x for horizontal
+  layers)
++ `bb_coord_flip()` supports density, histogram and smooth by swapping the
+  mapping and toggling their orientation
+
+## Tests and documentation
+
++ test-orientation-0.9.R covers horizontal density/histogram/smooth and their
+  coord-flip forms
++ the vignette statistical section documents horizontal statistics; known limits
+  now list only `bb_lm()`/`bb_signif()` as non-flippable
+
 # plotbb 0.12.0
 
 Horizontal ribbons.

@@ -103,3 +103,54 @@ test_that("coord_flip turns a vertical ribbon horizontal", {
     expect_gte(built$limits$ylim[[2]], 5)
     with_test_pdf(expect_silent(print(p)))
 })
+
+test_that("horizontal density and histogram put statistics on x", {
+    set.seed(3)
+    d <- data.frame(v = rnorm(40), g = factor(rep(c("a", "b"), 20)))
+    dens <- bbplot(d, bb_aes(y = v)) +
+        bb_density(orientation = "horizontal")
+    built <- bb_build(dens)
+    expect_lte(built$limits$xlim[[1]], 0)
+    expect_gte(built$limits$xlim[[2]], 0.1)
+    expect_equal(built$labs$xlab, "density")
+    with_test_pdf(expect_silent(print(dens)))
+
+    hist <- bbplot(d, bb_aes(y = v)) +
+        bb_hist(orientation = "horizontal")
+    built <- bb_build(hist)
+    expect_lte(built$limits$xlim[[1]], 0)
+    expect_gte(built$limits$xlim[[2]], 1)
+    expect_equal(built$labs$xlab, "count")
+    with_test_pdf(expect_silent(print(hist)))
+})
+
+test_that("coord_flip flips density and hist", {
+    set.seed(4)
+    d <- data.frame(v = rnorm(30))
+    with_test_pdf(expect_silent(print(
+        bbplot(d, bb_aes(x = v)) + bb_density() + bb_coord_flip()
+    )))
+    with_test_pdf(expect_silent(print(
+        bbplot(d, bb_aes(x = v)) + bb_hist() + bb_coord_flip()
+    )))
+})
+
+test_that("horizontal smooth fits the value against the other axis", {
+    set.seed(5)
+    d <- data.frame(t = 1:30, v = sin(1:30 / 5) + rnorm(30, sd = 0.1))
+    p <- bbplot(d, bb_aes(v, t)) +
+        bb_smooth(orientation = "horizontal", se = TRUE)
+    built <- bb_build(p)
+    expect_lte(built$limits$xlim[[1]], -0.9)
+    expect_gte(built$limits$xlim[[2]], 0.9)
+    expect_lte(built$limits$ylim[[1]], 1)
+    expect_gte(built$limits$ylim[[2]], 30)
+    with_test_pdf(expect_silent(print(p)))
+})
+
+test_that("coord_flip flips smooth", {
+    set.seed(6)
+    d <- data.frame(t = 1:30, v = sin(1:30 / 5) + rnorm(30, sd = 0.1))
+    p <- bbplot(d, bb_aes(t, v)) + bb_smooth() + bb_coord_flip()
+    with_test_pdf(expect_silent(print(p)))
+})

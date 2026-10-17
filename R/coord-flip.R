@@ -6,11 +6,11 @@
 ##'
 ##' Supported layers are `bb_point()`, `bb_line()`, `bb_text()`,
 ##' `bb_segment()`, `bb_tile()`, `bb_layer()`, `bb_violin()`, `bb_boxplot()`,
-##' `bb_bar()` and `bb_errorbar()` (the last four switch to the opposite
-##' `orientation`), plus constant or mapped `bb_hline()`/`bb_vline()` (which
-##' become the other reference line). Layers that have no orientation model
-##' (density, histogram, ribbon, smooth, lm, signif) raise an error rather than
-##' drawing in the wrong orientation.
+##' `bb_bar()`, `bb_errorbar()`, `bb_ribbon()`, `bb_density()`, `bb_hist()` and
+##' `bb_smooth()` (these switch to the opposite `orientation`), plus constant or
+##' mapped `bb_hline()`/`bb_vline()` (which become the other reference line).
+##' Layers that have no orientation model (`bb_lm()`, `bb_signif()`) raise an
+##' error rather than drawing in the wrong orientation.
 ##'
 ##' @title bb_coord_flip
 ##' @return A modified bbplot object
@@ -80,6 +80,30 @@ bb_flipped_layer <- function(obj, plot = NULL) {
         return(obj)
     }
 
+    if (identical(ly, ly_smooth)) {
+        obj$mapping <- bb_swap_mapping(obj$mapping)
+        current <- obj$params$orientation %||% "vertical"
+        obj$params$orientation <- if (identical(current, "horizontal")) {
+            "vertical"
+        } else {
+            "horizontal"
+        }
+        swap_limits()
+        return(obj)
+    }
+
+    if (identical(ly, ly_density) || identical(ly, ly_hist)) {
+        obj$mapping <- bb_swap_mapping(obj$mapping)
+        current <- obj$params$orientation %||% "vertical"
+        obj$params$orientation <- if (identical(current, "horizontal")) {
+            "vertical"
+        } else {
+            "horizontal"
+        }
+        swap_limits()
+        return(obj)
+    }
+
     if (identical(ly, ly_ribbon)) {
         obj$mapping <- bb_swap_mapping(obj$mapping)
         current <- obj$params$orientation %||% "vertical"
@@ -121,7 +145,8 @@ bb_flipped_layer <- function(obj, plot = NULL) {
 
     bb_abort("`bb_coord_flip()` does not support this layer. Supported layers ",
              "are point, line, text, segment, tile, custom layers, violin, ",
-             "boxplot, bar, errorbar, ribbon and hline/vline.")
+             "boxplot, bar, errorbar, ribbon, density, histogram, smooth ",
+             "and hline/vline.")
 }
 
 bb_flip_plot <- function(plot) {

@@ -4,19 +4,47 @@
 ##' @rdname layer
 ##' @param mapping aesthetic mapping
 ##' @param data layer data
+##' @param orientation `"vertical"` (default; counts on y) or `"horizontal"`
+##'   (counts on x). A horizontal histogram summarises `y`, or `x` when `y` is a
+##'   discrete group.
 ##' @param ... addition parameter for the layer
 ##' @return A modified bbplot object
 ##' @importFrom graphics hist
 ##' @export
 ##' @author Guangchuang Yu
-bb_hist <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
-    build_layer(mapping, data, inherit = inherit, ..., layer = ly_hist)
+bb_hist <- function(mapping = NULL, data = NULL, inherit = TRUE,
+                     orientation = c("vertical", "horizontal"), ...) {
+    orientation <- match.arg(orientation)
+    build_layer(mapping, data, inherit = inherit, orientation = orientation,
+                ..., layer = ly_hist)
+}
+
+bb_hist_values <- function(mapping, data, orientation) {
+    if (identical(orientation, "horizontal")) {
+        y <- eval_mapping(mapping, "y", data)
+        x <- eval_mapping(mapping, "x", data)
+        if (is.numeric(y)) {
+            group <- if (!is.null(x) && !is.numeric(x)) x else NULL
+            return(list(x = y, group = group))
+        }
+        if (is.numeric(x)) return(list(x = x, group = y))
+        bb_abort("a horizontal histogram needs a numeric `y`, or a numeric ",
+                 "`x` with a discrete `y`.")
+    }
+    bb_stat_values(eval_mapping(mapping, "x", data),
+                   eval_mapping(mapping, "y", data))
 }
 
 ly_hist <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
     params <- list(...)
     mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+    orientation <- params$orientation %||% "vertical"
+    params$orientation <- NULL
+    if (!orientation %in% c("vertical", "horizontal")) {
+        bb_abort("`orientation` in `bb_hist()` must be 'vertical' or ",
+                 "'horizontal'.")
+    }
     ## A constant `fill` names the interior of the bars/boxes; after the
     ## mapping has been resolved (so the constant also removes a mapped fill),
     ## it becomes the `col` the base function understands.
@@ -27,21 +55,22 @@ ly_hist <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
 
 
     ly <- function() {
-        if (is.null(mapping$x)) return(invisible(NULL))
-
-        x <- bb_eval_one(mapping$x, data)
-        if (is.null(x)) return(invisible(NULL))
-        values <- bb_stat_values(x, eval_mapping(mapping, "y", data))
+        if (is.null(mapping$x) && is.null(mapping$y)) return(invisible(NULL))
+        values <- bb_hist_values(mapping, data, orientation)
         x <- values$x
+        if (is.null(x)) return(invisible(NULL))
         keep_finite <- is.finite(x)
-        x <- x[keep_finite]
-        if (length(x) < 2) {
+        group <- bb_stat_group(values, mapping, data)
+        if (length(x[keep_finite]) < 2) {
             bb_warn("`bb_hist()` needs at least two finite values to draw a histogram; skipped.")
             return(invisible(NULL))
         }
 
         args <- params
-        group <- bb_stat_group(values, mapping, data)
+        if (identical(orientation, "horizontal")) {
+            return(ly_hist_horizontal(x, keep_finite, group, args, mapping,
+                                      data, plot))
+        }
         if (is.null(group)) {
             # In base hist() the col argument is a vector of bar colours, not
             # an observation-level aesthetic. Use a mapped colour only when
@@ -135,4 +164,67 @@ ly_hist <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     }
 
     add_layer(plot, ly, "histogram layer")
+}
+
+## Horizontal histograms are drawn as rectangles rather than through
+## graphics::hist(add = TRUE), whose axes assume a vertical histogram.
+ly_hist_horizontal <- function(x, keep, group, args, mapping, data, plot) {
+    x <- x[keep]
+    group <- if (is.null(group)) NULL else group[keep]
+    breaks <- args$breaks %||% "Sturges"
+    all_breaks <- graphics::hist(x, breaks = breaks, plot = FALSE)$breaks
+    probability <- isTRUE(args$probability) ||
+        (!is.null(args$freq) && !isTRUE(args$freq))
+    heights <- function(h) if (probability) h$density else h$counts
+    border <- args$border %||% "white"
+
+    if (is.null(group)) {
+        col <- args$col %||% {
+            cols <- if (!is.null(mapping$fill)) {
+                bb_fill(mapping, data, plot = plot)
+            } else if (!is.null(mapping$col)) {
+                bb_col(mapping, data, plot = plot)
+            } else {
+                NULL
+            }
+            if (is.null(cols)) "grey80" else unique(cols[!is.na(cols)])[1]
+        }
+        h <- graphics::hist(x, breaks = all_breaks, plot = FALSE)
+        graphics::rect(0, all_breaks[-length(all_breaks)], heights(h),
+                       all_breaks[-1L],
+                       col = grDevices::adjustcolor(col, alpha.f = 0.5),
+                       border = border)
+        return(invisible(NULL))
+    }
+
+    levels <- unique(as.character(group))
+    cols <- args$col
+    if (is.null(cols)) {
+        mapped <- if (!is.null(mapping$fill)) {
+            bb_fill(mapping, data, plot = plot)
+        } else if (!is.null(mapping$col)) {
+            bb_col(mapping, data, plot = plot)
+        } else {
+            NULL
+        }
+        if (!is.null(mapped)) {
+            mapped <- mapped[keep]
+            cols <- vapply(levels, function(g) {
+                mapped[!is.na(group) & as.character(group) == g][1]
+            }, character(1))
+        }
+    }
+    if (is.null(cols)) cols <- grDevices::hcl.colors(length(levels), "Dark 3")
+    cols <- rep(cols, length.out = length(levels))
+
+    for (i in seq_along(levels)) {
+        vals <- x[!is.na(group) & as.character(group) == levels[i]]
+        if (length(vals) < 2) next
+        h <- graphics::hist(vals, breaks = all_breaks, plot = FALSE)
+        graphics::rect(0, all_breaks[-length(all_breaks)], heights(h),
+                       all_breaks[-1L],
+                       col = grDevices::adjustcolor(cols[i], alpha.f = 0.5),
+                       border = border)
+    }
+    invisible(NULL)
 }

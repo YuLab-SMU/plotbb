@@ -660,7 +660,10 @@ and its result is what takes part in the ranges.
 
 `bb_hist()` and `bb_density()` share one grouping rule with the other
 statistical layers: an explicit `group` mapping wins, then a discrete `x`, then
-`col`, then `fill`. A constant colour is never a grouping. The rule is stated once and used
+`col`, then `fill`. With `orientation = "horizontal"`, the statistic is drawn on
+x: a horizontal density summarises `y` (or `x` when `y` is a discrete group),
+and a horizontal histogram puts counts on x. `bb_smooth()` follows the same
+idea: horizontal fits `x` against `y` and draws the confidence band sideways. A constant colour is never a grouping. The rule is stated once and used
 both when drawing and when computing the range, so a grouped histogram is
 scaled to the tallest single group rather than to the pooled counts.
 
@@ -1208,12 +1211,12 @@ The error messages are written to point back at a rule. A short map:
 | `bb_errorbar()` | `x` + `ymin`/`ymax`, or `y` + `xmin`/`xmax` | `orientation`, `width` |
 | `bb_bar()` | `x` (`stat = "count"`) or `x`, `y` | `orientation`; horizontal identity takes `x` values and `y` categories |
 | `bb_boxplot()` | `x`, `y` | groups by `x` |
-| `bb_hist()` | numeric `x`, or discrete `x` with numeric `y` | For discrete `x`, draws comparable `y` histograms within each group; mapped colours are group-based |
-| `bb_density()` | numeric `x`, or discrete `x` with numeric `y` | Grouped by discrete `x` or by `col`/`fill`/`group` |
+| `bb_hist()` | numeric `x`, or discrete `x` with numeric `y` | For discrete `x`, draws comparable `y` histograms within each group; mapped colours are group-based; `orientation` |
+| `bb_density()` | numeric `x`, or discrete `x` with numeric `y` | Grouped by discrete `x` or by `col`/`fill`/`group`; `orientation` |
 | `bb_tile()` | `x`, `y`, `col` (or `fill`) | heatmap tiles |
 | `bb_ribbon()` | `x`, `ymin`, `ymax` | sorted by `x`; `alpha`, `border`; one band per group |
 | `bb_violin()` | `x` (group), numeric `y` | density per group; `width`, `adjust`, `bw`, `trim` |
-| `bb_smooth()` | `x`, `y`, optional `group` | explicit `method`/`formula`; `se`, `level` |
+| `bb_smooth()` | `x`, `y`, optional `group` | explicit `method`/`formula`; `se`, `level`; `orientation` |
 | `bb_hline()` | `yintercept` or a `yintercept` mapping | no range change unless `expand_limits = TRUE` |
 | `bb_vline()` | `xintercept` or a `xintercept` mapping | no range change unless `expand_limits = TRUE` |
 | `bb_lm()` | `x`, `y`, optional `group` | `se`, `level` |
@@ -1293,8 +1296,8 @@ Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
   polyline cannot change colour halfway. Add a `group` mapping to draw one line
   per group.
 * `bb_coord_flip()` flips point/line/text/segment/tile/custom layers,
-  violin/boxplot/bar/errorbar/ribbon (toggling their orientation) and
-  hline/vline; density, histogram, smooth, lm and signif are not flipped.
+  violin/boxplot/bar/errorbar/ribbon/density/histogram/smooth (toggling their
+  orientation) and hline/vline; `bb_lm()` and `bb_signif()` are not flipped.
 * `bb_bar(orientation = "horizontal")` uses categories on `x` for counts and
   numeric values on `x` / categories on `y` for identity bars; horizontal
   identity bars do not aggregate duplicate categories.
