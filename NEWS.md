@@ -1,3 +1,30 @@
+# plotbb 0.6.0
+
+This release finishes the facet layout and adds a row/column facet grid.
+
+## Facets
+
++ `bb_facet_wrap()` gains `labeller`, `drop` and `strip_width`: strip labels can
+  be relabelled and wrapped, and `drop = FALSE` keeps unused factor levels as
+  empty panels (they fall back to the global limits, also on free scales)
++ `bb_facet_grid()` places one variable on rows and another on columns, with
+  column labels on top and row labels on the right; a combination without rows
+  is drawn empty
++ grid free scales follow the layout: x is shared within a column and y within a
+  row, while `fixed` uses the global limits
++ `bb_build()` reports grid panels with their row/column keys, labels, row
+  counts and the limits that are drawn; the facet summary records `kind = "grid"`
+
+## Tests and documentation
+
++ test-facets-0.6.R covers empty levels, labellers/wrapping, grid layout,
+  every-direction grids, empty combinations, outside legends and build/draw
+  limit equality
++ the vignette facet section documents `drop`, `labeller`, `strip_width` and
+  `bb_facet_grid()`
++ the layout boundary is recorded: complete plots are combined with
+  `aplot::plot_list()` (aplot has no `plot_grid()`), while facets stay in plotbb
+
 # plotbb 0.5.0
 
 This release adds the build and save workflow: a plot can be inspected without

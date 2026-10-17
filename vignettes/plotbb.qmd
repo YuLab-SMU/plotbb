@@ -537,6 +537,34 @@ p + bb_point(pch = 19) +
   bb_facet_wrap(~paste(cyl, am, sep = "/"), ncol = 2)
 ```
 
+Unused factor levels are dropped by default. `drop = FALSE` keeps them as empty
+panels, which makes a missing group visible instead of silently absent; an
+empty panel uses the global limits even on free scales. `labeller` changes the
+strip text and `strip_width` wraps a long strip, with the top margin following
+the wrapped number of lines.
+
+```{r plotbb-facet-drop}
+facet_data <- data.frame(
+  x = 1:6, y = 1:6,
+  f = factor(rep(c("a", "b"), each = 3), levels = c("a", "b", "c"))
+)
+bbplot(facet_data, bb_aes(x, y)) + bb_point() +
+  bb_facet_wrap(~f, ncol = 3, drop = FALSE,
+                labeller = function(key) paste("group", key),
+                strip_width = 10)
+```
+
+`bb_facet_grid()` puts one variable on rows and another on columns. Every
+combination of row and column keys gets a panel; a combination without rows is
+drawn empty. Column labels sit on top, row labels on the right. With free
+scales, x is shared within a column and y within a row, matching the grid
+reading order.
+
+```{r plotbb-facet-grid}
+bbplot(mtcars, bb_aes(mpg, disp)) + bb_point() +
+  bb_facet_grid(rows = ~cyl, cols = ~am)
+```
+
 ## Statistical and annotation layers
 
 The statistical layers take the same data and mapping arguments as the
@@ -1062,8 +1090,8 @@ it to a device and restores the caller's device afterwards.
 Extension: `bb_layer()` adds a drawing function inside the grammar;
 `bbplot_add()` adds a new component class (register the S3 method in a package).
 
-Components: `bb_facet_wrap()`, `bb_legend()`, `bb_labs()` (and `bb_title()`,
-`bb_sub()`, `bb_xlab()`, `bb_ylab()`), `bb_theme()` with the presets
+Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
+(and `bb_title()`,`bb_sub()`, `bb_xlab()`, `bb_ylab()`), `bb_theme()` with the presets
 `bb_theme_expand()`, `bb_theme_grey()`, `bb_theme_deepblue()`,
 `bb_theme_bw()`, `bb_theme_minimal()`, and the scales `bb_scale_col_palette()`,
 `bb_scale_col_manual()`, `bb_scale_col_gradient()`, `bb_scale_fill_palette()`,
@@ -1086,5 +1114,5 @@ Components: `bb_facet_wrap()`, `bb_legend()`, `bb_labs()` (and `bb_title()`,
 * `+` combines components of one plot; for several plots use
   `aplot::plot_list()`.
 * Planned for later releases and therefore **not** part of this grammar:
-  `bb_violin()`, `bb_smooth()`, `bb_facet_grid()`, `bb_build()`, `bb_save()`,
-  a per-layer legend and free colour scales by facet.
+  `bb_violin()`, `bb_smooth()`, a per-layer legend and the colour-bar polish
+  (minor ticks, a discrete gradient legend, long-title wrapping).

@@ -58,12 +58,44 @@ bb_build <- function(plot) {
 ## formula's quosure/environment, which should not be the only way to inspect it.
 bb_build_facet <- function(facet) {
     if (is.null(facet)) return(NULL)
+    if (inherits(facet, "bb_facet_grid")) {
+        vars <- c(
+            if (!is.null(facet$rows)) all.vars(rlang::f_rhs(facet$rows)),
+            if (!is.null(facet$cols)) all.vars(rlang::f_rhs(facet$cols))
+        )
+        return(list(
+            kind = "grid",
+            vars = vars,
+            scales = facet$scales %||% "fixed",
+            rows = if (is.null(facet$rows)) NULL else
+                as.character(rlang::f_rhs(facet$rows)),
+            cols = if (is.null(facet$cols)) NULL else
+                as.character(rlang::f_rhs(facet$cols))
+        ))
+    }
     list(
+        kind = "wrap",
         vars = all.vars(rlang::f_rhs(facet$facets)),
         scales = facet$scales %||% "fixed",
         nrow = facet$nrow,
         ncol = facet$ncol
     )
+}
+
+bb_build_panels_grid <- function(plot) {
+    specs <- bb_grid_specs(plot)
+    lapply(specs, function(spec) {
+        list(
+            key = spec$key,
+            row = spec$row,
+            col = spec$col,
+            row_label = spec$row_label,
+            col_label = spec$col_label,
+            n = spec$n,
+            xlim = spec$xlim,
+            ylim = spec$ylim
+        )
+    })
 }
 
 ## The computation shared by `print()` and `bb_build()`: train the scales,
@@ -129,6 +161,7 @@ bb_build_layers <- function(plot) {
 bb_build_panels <- function(plot) {
     facet <- plot$facet
     if (is.null(facet)) return(NULL)
+    if (inherits(facet, "bb_facet_grid")) return(bb_build_panels_grid(plot))
     data <- plot$data
     if (is.null(data)) {
         bb_abort("`bb_facet_wrap()` requires plot data; `bb_build()` cannot ",
@@ -138,19 +171,19 @@ bb_build_panels <- function(plot) {
     expr <- rlang::f_rhs(facet$facets)
     facet_vars <- all.vars(expr)
     values <- rlang::eval_tidy(expr, data = data)
-    keys_chr <- as.character(values)
-    keys <- sort(unique(keys_chr[!is.na(keys_chr)]))
+    keys <- bb_facet_levels(facet, values)
     if (!length(keys)) return(list())
     bb_facet_layout(facet, length(keys))
     scales <- facet$scales %||% "fixed"
     global <- bb_plot_limits(plot)
 
     lapply(keys, function(key) {
-        idx <- !is.na(keys_chr) & keys_chr == key
+        idx <- !is.na(as.character(values)) & as.character(values) == key
+        empty_panel <- !any(idx)
         panel_data <- data[idx, , drop = FALSE]
         panel <- .bbplot_initial(plot$canvas, panel_data, plot$mapping)
 
-        for (obj in plot$adds) {
+        for (obj in if (empty_panel) list() else plot$adds) {
             if (inherits(obj, "bb_facet_wrap")) next
             if (inherits(obj, "bb_legend") && isTRUE(obj$outside)) next
             if (isTRUE(attr(obj, "bb_generated"))) next
@@ -175,9 +208,18 @@ bb_build_panels <- function(plot) {
 
         list(
             key = key,
+            label = bb_facet_label(facet, key),
             n = sum(idx),
-            xlim = if (scales %in% c("free", "free_x")) lim$xlim else global$xlim,
-            ylim = if (scales %in% c("free", "free_y")) lim$ylim else global$ylim
+            xlim = if (empty_panel || !scales %in% c("free", "free_x")) {
+                global$xlim
+            } else {
+                lim$xlim
+            },
+            ylim = if (empty_panel || !scales %in% c("free", "free_y")) {
+                global$ylim
+            } else {
+                lim$ylim
+            }
         )
     })
 }

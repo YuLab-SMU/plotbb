@@ -11,7 +11,11 @@ print.bbplot <- function(x, ...) {
             par(x$theme, no.readonly = TRUE)
         }
 
-        bb_print_facet(x)
+        if (inherits(x$facet, "bb_facet_grid")) {
+            bb_print_facet_grid(x)
+        } else {
+            bb_print_facet(x)
+        }
         return(invisible(x))
     }
 
@@ -92,9 +96,7 @@ bb_print_facet <- function(x) {
     facet_expr <- rlang::f_rhs(facet$facets)
     facet_vars <- all.vars(facet_expr)
     facet_val <- rlang::eval_tidy(facet_expr, data = data)
-    facet_chr <- as.character(facet_val)
-    facet_chr <- facet_chr[!is.na(facet_chr)]
-    lev <- sort(unique(facet_chr))
+    lev <- bb_facet_levels(facet, facet_val)
     if (length(lev) == 0) return(invisible(NULL))
 
     lim_global <- bb_plot_limits(x)
@@ -131,11 +133,13 @@ bb_print_facet <- function(x) {
     for (i in seq_along(lev)) {
         v <- lev[i]
         idx <- as.character(facet_val) == v
+        empty_panel <- !any(idx)
         d <- data[idx, , drop = FALSE]
 
         base_canvas <- function(xlim = NULL, ylim = NULL) {
             xy <- bb_eval_xy(x$mapping, d)
-            if (!is.null(xy$x) && !is.null(xy$y)) {
+            if (!is.null(xy$x) && !is.null(xy$y) &&
+                length(xy$x) > 0L && length(xy$y) > 0L) {
                 args <- list(xy$x, xy$y, type = "n", xlab = "", ylab = "")
                 if (!is.null(xlim)) args$xlim <- xlim
                 if (!is.null(ylim)) args$ylim <- ylim
@@ -145,13 +149,19 @@ bb_print_facet <- function(x) {
                 do.call(graphics::plot, args)
                 return(invisible(NULL))
             }
+            if (!is.null(xlim) && !is.null(ylim)) {
+                graphics::plot.new()
+                graphics::plot.window(xlim = xlim, ylim = ylim)
+                graphics::box()
+                return(invisible(NULL))
+            }
             bb_call_canvas(x$canvas, xlim = xlim, ylim = ylim)
             invisible(NULL)
         }
 
         p <- .bbplot_initial(base_canvas, d, x$mapping)
 
-        if (length(adds)) {
+        if (length(adds) && !empty_panel) {
             for (obj in adds) {
                 if (inherits(obj, "bb_facet_wrap")) next
                 if (inherits(obj, "bb_legend") && isTRUE(obj$outside)) next
@@ -189,7 +199,7 @@ bb_print_facet <- function(x) {
         p <- bb_set_scales(p, bb_get_scales(x))
         p <- bb_summary_labs(p)
 
-        if (identical(scales, "fixed")) {
+        if (identical(scales, "fixed") || empty_panel) {
             lim <- lim_global
         } else {
             lim_panel <- bb_plot_limits(p)
@@ -199,10 +209,15 @@ bb_print_facet <- function(x) {
             )
         }
 
-        p$labs$main <- as.character(v)
+        label <- bb_facet_label(facet, v)
+        p$labs$main <- label
         p$labs$sub <- NULL
 
-        if (nrow == 1 && scales %in% c("fixed", "free_x")) {
+        strip_lines <- max(1L, length(strsplit(label, "\n", fixed = TRUE)[[1]]))
+        if (strip_lines > 1L) {
+            graphics::par(mar = c(4, if (i %% ncol == 1L) 4 else 1.5,
+                                  2 + strip_lines, 1))
+        } else if (nrow == 1 && scales %in% c("fixed", "free_x")) {
             graphics::par(mar = c(4, if (i == 1) 4 else 1.5, 3, 1))
         }
 
@@ -290,26 +305,69 @@ bb_facet_layer_data <- function(layer_data, facet, panel, idx, n_plot) {
 ##' @param ncol number of columns.
 ##' @param nrow number of rows.
 ##' @param scales scale behavior across facets, one of 'fixed', 'free', 'free_x', or 'free_y'.
+##' @param labeller optional function applied to each panel key; the result is
+##'   the strip label.
+##' @param drop if FALSE, unused factor levels still get a panel. Such a panel
+##'   has no rows and falls back to the global limits, including on free scales.
+##' @param strip_width optional positive integer; wraps long strip labels with
+##'   \code{strwrap()}.
 ##' @details \code{nrow} and \code{ncol} must be positive integers, and their
 ##' product must be at least the number of panels; a layout that is too small is
-##' reported instead of silently overwriting a panel. Facets are built from the
-##' keys that occur in the data, so unused factor levels do not create empty
-##' panels.
+##' reported instead of silently overwriting a panel. By default facets are built
+##' from the keys that occur in the data, so unused factor levels do not create
+##' empty panels; set \code{drop = FALSE} to keep them.
 ##' @return A modified bbplot object
 ##' @export
 ##' @author Guangchuang Yu
-bb_facet_wrap <- function(facets, ncol = NULL, nrow = NULL, scales = "fixed") {
+bb_facet_wrap <- function(facets, ncol = NULL, nrow = NULL, scales = "fixed",
+                          labeller = NULL, drop = TRUE, strip_width = NULL) {
     stopifnot(inherits(facets, "formula"))
     scales <- match.arg(scales, c("fixed", "free", "free_x", "free_y"))
+    if (!is.null(labeller) && !is.function(labeller)) {
+        bb_abort("`labeller` in `bb_facet_wrap()` must be a function or NULL.")
+    }
+    if (!is.logical(drop) || length(drop) != 1L || is.na(drop)) {
+        bb_abort("`drop` in `bb_facet_wrap()` must be TRUE or FALSE.")
+    }
+    if (!is.null(strip_width)) {
+        if (!is.numeric(strip_width) || length(strip_width) != 1L ||
+            is.na(strip_width) || strip_width < 1 ||
+            strip_width != as.integer(strip_width)) {
+            bb_abort("`strip_width` in `bb_facet_wrap()` must be a positive ",
+                     "integer or NULL.")
+        }
+        strip_width <- as.integer(strip_width)
+    }
     structure(
         list(
             facets = facets,
             ncol = ncol,
             nrow = nrow,
-            scales = scales
+            scales = scales,
+            labeller = labeller,
+            drop = drop,
+            strip_width = strip_width
         ),
         class = "bb_facet_wrap"
     )
+}
+
+bb_facet_levels <- function(facet, values) {
+    chr <- as.character(values)
+    if (isFALSE(facet$drop) && is.factor(values)) {
+        return(levels(values))
+    }
+    sort(unique(chr[!is.na(chr)]))
+}
+
+bb_facet_label <- function(facet, key) {
+    label <- if (is.null(facet$labeller)) key else facet$labeller(key)
+    if (length(label) != 1L || is.na(label)) label <- key
+    label <- as.character(label)
+    if (!is.null(facet$strip_width)) {
+        label <- paste(strwrap(label, width = facet$strip_width), collapse = "\n")
+    }
+    label
 }
 
 bb_facet_layout <- function(facet, n_panels) {

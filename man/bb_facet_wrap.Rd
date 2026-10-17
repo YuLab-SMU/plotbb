@@ -4,7 +4,15 @@
 \alias{bb_facet_wrap}
 \title{bb_facet_wrap}
 \usage{
-bb_facet_wrap(facets, ncol = NULL, nrow = NULL, scales = "fixed")
+bb_facet_wrap(
+  facets,
+  ncol = NULL,
+  nrow = NULL,
+  scales = "fixed",
+  labeller = NULL,
+  drop = TRUE,
+  strip_width = NULL
+)
 }
 \arguments{
 \item{facets}{a formula specifying faceting variable, e.g. \code{~cyl}.}
@@ -14,6 +22,15 @@ bb_facet_wrap(facets, ncol = NULL, nrow = NULL, scales = "fixed")
 \item{nrow}{number of rows.}
 
 \item{scales}{scale behavior across facets, one of 'fixed', 'free', 'free_x', or 'free_y'.}
+
+\item{labeller}{optional function applied to each panel key; the result is
+the strip label.}
+
+\item{drop}{if FALSE, unused factor levels still get a panel. Such a panel
+has no rows and falls back to the global limits, including on free scales.}
+
+\item{strip_width}{optional positive integer; wraps long strip labels with
+\code{strwrap()}.}
 }
 \value{
 A modified bbplot object
@@ -24,9 +41,9 @@ Facet a bbplot object into multiple panels.
 \details{
 \code{nrow} and \code{ncol} must be positive integers, and their
 product must be at least the number of panels; a layout that is too small is
-reported instead of silently overwriting a panel. Facets are built from the
-keys that occur in the data, so unused factor levels do not create empty
-panels.
+reported instead of silently overwriting a panel. By default facets are built
+from the keys that occur in the data, so unused factor levels do not create
+empty panels; set \code{drop = FALSE} to keep them.
 }
 \author{
 Guangchuang Yu
