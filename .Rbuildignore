@@ -10,3 +10,4 @@ README_files
 ^README\.qmd$
 ^CRAN-SUBMISSION$
 notes/
+vignettes/plotbb.html

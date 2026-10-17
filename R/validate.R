@@ -19,10 +19,9 @@ bb_layer_data <- function(plot, data, mapping = NULL) {
                  " requires data: supply it in `bbplot()` or through the ",
                  "layer's `data` argument.")
     }
-    ly_data <- bb_data(plot, data)
-    if (!is.null(ly_data) && !is.data.frame(ly_data)) {
-        ly_data <- tryCatch(as.data.frame(ly_data), error = function(e) NULL)
-    }
+    label <- bb_layer_label(mapping, "this layer")
+    data <- bb_as_data_frame(data, label)
+    ly_data <- bb_as_data_frame(bb_data(plot, data), label)
     if (is.null(ly_data)) {
         if (is.null(plot$data) && !is.null(data)) {
             bb_abort(bb_layer_label(mapping, "the layer"),
@@ -31,6 +30,23 @@ bb_layer_data <- function(plot, data, mapping = NULL) {
         return(NULL)
     }
     ly_data
+}
+
+## Coerce layer data to a data frame, or explain why that is impossible.
+##
+## A layer's `data` is a first-class input (ranges, scales and panels all use
+## it), so a silently `NULL` frame would hide the mistake behind "no data to
+## draw" much later.
+bb_as_data_frame <- function(data, label = "this layer") {
+    if (is.null(data)) return(NULL)
+    if (is.data.frame(data)) return(data)
+    out <- tryCatch(as.data.frame(data), error = function(e) NULL)
+    if (is.null(out)) {
+        bb_abort("`data` for ", label, " must be a data frame, or something ",
+                 "that can be converted into one; got <", class(data)[[1]],
+                 ">.")
+    }
+    out
 }
 
 ## TRUE for rows whose numeric coordinates are all finite.
@@ -110,6 +126,23 @@ bb_prepare_aes <- function(x, y, mapping, data, layer, aes = list(),
     list(x = x, y = y, keep = ok, n = n)
 }
 
+## Subset length-n constants to the rows a layer actually draws.
+##
+## A length-n constant is row-aligned, exactly like a mapped aesthetic: when
+## rows with NA or infinite coordinates are dropped, the constants must follow,
+## otherwise a colour/pch/cex vector silently shifts onto the wrong points.
+bb_layer_constants <- function(params, keep, n,
+                               aesthetics = c("col", "fill", "pch", "lty",
+                                              "cex", "label")) {
+    for (a in intersect(names(params), aesthetics)) {
+        value <- params[[a]]
+        if (!is.null(value) && length(value) == n) {
+            params[[a]] <- value[keep]
+        }
+    }
+    params
+}
+
 ## Recycle an aesthetic vector to `n` values and subset it to drawable rows.
 bb_aes_subset <- function(value, keep, n = length(keep)) {
     if (is.null(value)) return(NULL)
@@ -170,4 +203,24 @@ bb_rng_snapshot <- function() {
         }
         invisible(NULL)
     }
+}
+
+## Resolve a mapped aesthetic into the values a layer will draw.
+##
+## Kept deliberately small: a mapped aesthetic is read from the plot that is
+## being drawn, so the scale in effect is the last one in the `+` chain. It is
+## *not* resolved when the layer is added: freezing values at that point makes
+## a later `bb_scale_*()` change or be ignored depending on where it sits in
+## the chain.
+bb_probe_aesthetic <- function(plot, mapping, data, aesthetic, keep, n) {
+    if (is.null(mapping[[aesthetic]])) return(NULL)
+    value <- switch(aesthetic,
+        col = bb_col(mapping, data, plot = plot),
+        pch = bb_pch(mapping, data, plot = plot),
+        cex = bb_cex(mapping, data, plot = plot),
+        lty = bb_lty(mapping, data, plot = plot),
+        eval_mapping(mapping, aesthetic, data)
+    )
+    if (is.null(value)) return(NULL)
+    if (!is.null(keep) && !is.null(n)) bb_aes_subset(value, keep, n) else value
 }

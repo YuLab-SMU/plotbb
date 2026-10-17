@@ -7,6 +7,18 @@
 ##' @title bbplot
 ##' @param data data
 ##' @param mapping variable mapping
+##'
+##' @details
+##' `+` adds components (layers, themes, labels, scales, legends, facets) to a
+##' single plot and draws them in the order they were added. It does not
+##' combine two complete plots: arrange several plots with
+##' \code{aplot::plot_list()} instead.
+##'
+##' Every layer inherits the plot \code{data} and \code{mapping} and may
+##' override them: a local mapping overrides the global mapping aesthetic by
+##' aesthetic, and \code{inherit = FALSE} opts out of the global mapping
+##' entirely. Aesthetic constants such as \code{bb_point(col = "tomato")} apply
+##' to the whole layer and win over a mapped aesthetic.
 ##' @return bbplot object
 ##' @importFrom graphics plot
 ##' @export

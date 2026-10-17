@@ -60,7 +60,9 @@ bb_print_facet <- function(x) {
     data <- x$data
     if (is.null(data)) stop("bb_facet_wrap requires plot data")
 
-    facet_val <- rlang::eval_tidy(rlang::f_rhs(facet$facets), data = data)
+    facet_expr <- rlang::f_rhs(facet$facets)
+    facet_vars <- all.vars(facet_expr)
+    facet_val <- rlang::eval_tidy(facet_expr, data = data)
     facet_chr <- as.character(facet_val)
     facet_chr <- facet_chr[!is.na(facet_chr)]
     lev <- sort(unique(facet_chr))
@@ -134,6 +136,28 @@ bb_print_facet <- function(x) {
             for (obj in adds) {
                 if (inherits(obj, "bb_facet_wrap")) next
                 if (inherits(obj, "bb_legend") && isTRUE(obj$outside)) next
+                ## Layer data follows the panels. When the layer data carries
+                ## the facet variable, subset it by its own values; otherwise
+                ## fall back to the row positions of the plot data, which is
+                ## only meaningful when the two have the same number of rows.
+                if (inherits(obj, "bb_layer") && is.data.frame(obj$data)) {
+                    ## Speak up rather than silently drawing an unsplit layer in
+                    ## every panel: without the facet variable and without row
+                    ## alignment, the layer cannot be assigned to a panel.
+                    if (length(facet_vars) &&
+                        !all(facet_vars %in% names(obj$data)) &&
+                        nrow(obj$data) != nrow(data)) {
+                        bb_warn("layer data does not carry the facet variable (",
+                                paste(facet_vars, collapse = ", "),
+                                ") and has a different number of rows; it is ",
+                                "drawn in every panel without being split.")
+                    }
+                    obj$data <- bb_facet_layer_data(obj$data, facet, v, idx,
+                                                    nrow(data))
+                    ## A layer whose data has no rows in this panel is simply
+                    ## absent from it; that is not the "no data to draw" error.
+                    if (nrow(obj$data) == 0L) next
+                }
                 p <- p + obj
             }
         }
@@ -196,6 +220,40 @@ bb_print_facet <- function(x) {
 print.bbplot_layer_list <- function(x, ...) {
     cat(length(x), "layers added to the plot\n")
     cat(paste0("  ", seq_along(x), ". ", names(x), collapse="\n"), "\n")
+}
+
+## Subset layer data for one facet panel.
+##
+## A layer's own data is a first-class input, so it has to follow the panels.
+## The facet expression itself is reused on the layer data, which keeps
+## single-variable (`~f`), multi-variable (`~f + g`), transformed (`~cut(x, 3)`)
+## and composed (`~paste(f, g)`) facets consistent with the plot data.
+##
+## Two cases are supported explicitly:
+##
+## * the layer data carries every variable the facet expression needs: evaluate
+##   the expression on it and keep the rows of this panel, so row order and row
+##   count need not match the plot data;
+## * otherwise, when it has the same number of rows as the plot data, reuse the
+##   panel row positions (the layer is assumed to be row-aligned with the plot
+##   data);
+## * anything else is left untouched rather than silently mis-sliced.
+bb_facet_layer_data <- function(layer_data, facet, panel, idx, n_plot) {
+    expr <- rlang::f_rhs(facet$facets)
+    vars <- all.vars(expr)
+    if (length(vars) && all(vars %in% names(layer_data))) {
+        key <- tryCatch(rlang::eval_tidy(expr, data = layer_data),
+                        error = function(e) NULL)
+        if (!is.null(key) && length(key) == nrow(layer_data)) {
+            key <- as.character(key)
+            keep <- !is.na(key) & key == as.character(panel)
+            return(layer_data[keep, , drop = FALSE])
+        }
+    }
+    if (nrow(layer_data) == n_plot) {
+        return(layer_data[idx, , drop = FALSE])
+    }
+    layer_data
 }
 
 ##' Facet a bbplot object into multiple panels.

@@ -9,15 +9,15 @@
 ##' @importFrom graphics boxplot
 ##' @export
 ##' @author Guangchuang Yu
-bb_boxplot <- function(mapping = NULL, data = NULL, ...) {
-    build_layer(mapping, data, ..., layer = ly_boxplot)
+bb_boxplot <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
+    build_layer(mapping, data, inherit = inherit, ..., layer = ly_boxplot)
 }
 
-ly_boxplot <- function(plot, mapping = NULL, data = NULL, ...) {
+ly_boxplot <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
-    mapping <- bb_mapping(plot, mapping)
-
     params <- list(...)
+    mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+
     if (is.null(params$add)) params$add <- TRUE
     if (is.null(params$axes)) params$axes <- FALSE
 

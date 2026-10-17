@@ -1,14 +1,14 @@
 ##' @rdname layer
 ##' @export
-bb_line <- function(mapping = NULL, data = NULL, ...) {
+bb_line <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
     build_layer(mapping, data, ..., layer = ly_line)
 }
 
-ly_line <- function(plot, mapping = NULL, data = NULL, ...) {
+ly_line <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
-    mapping <- bb_mapping(plot, mapping)
-
     params <- list(...)
+    mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+
 
     xy <- bb_eval_xy(mapping, data)
     x <- xy$x
@@ -21,6 +21,7 @@ ly_line <- function(plot, mapping = NULL, data = NULL, ...) {
     x <- prepared$x
     y <- prepared$y
     keep <- prepared$keep
+    params <- bb_layer_constants(params, keep, prepared$n)
 
     group <- eval_mapping(mapping, "group", data)
 

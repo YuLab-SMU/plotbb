@@ -1,3 +1,87 @@
+# plotbb 0.2.5
+
+This release fixes the grammar rather than adding layers: it states the rules a
+user can rely on when composing a plot, and rewrites the vignette around them.
+
+## Inheritance
+
++ every layer now accepts `inherit`. A local mapping overrides the global
+  mapping aesthetic by aesthetic; `inherit = FALSE` makes the layer use its own
+  mapping only. Previously `inherit` did not exist and a layer always inherited
+  everything
++ layer `data` is a first-class input: it contributes to the axis ranges and to
+  `bb_facet_wrap(scales = "free_*")` ranges. Each panel takes the rows of the
+  layer data that carry the panel's facet value, using the same facet expression
+  as the plot data (so `~f`, `~paste(f, g)` and transformed keys all work);
+  row-aligned layer data with the same number of rows as the plot data uses the
+  panel row positions instead, and any other layout is left untouched rather
+  than silently mis-sliced
++ a layer `data` that cannot be turned into a data frame is reported with a
+  message naming the layer, instead of failing later with "no data to draw"
++ `bb_facet_wrap()` warns when a layer's own data can neither be split by the
+  facet expression nor be row-aligned with the plot data, instead of silently
+  drawing the whole layer in every panel
+
+## Constants versus mappings
+
++ enforced in one place instead of per layer: a constant aesthetic removes the
+  mapping of that aesthetic for the layer (`bb_layer_aesthetics()`), so it is
+  never sent through a scale, is not repainted by a later scale, and does not
+  group a statistical layer. Previously the rule was re-implemented by every
+  layer and broke in `bb_hist()` (mapped `col` overwrote `col =`) and
+  `bb_density()` (constant `col`/`fill` was ignored entirely); `bb_boxplot()`
+  let a mapped `col` take over a constant one
++ a length-n constant is row-aligned: it follows the rows that survive
+  validation, the same way mapped values do, so dropping `NA`/infinite rows no
+  longer shifts a colour, `pch` or `cex` vector onto the wrong points
++ `bb_hist()` now groups like `bb_density()`: discrete `x`, else `group`, then
+  `col`, then `fill` (`bb_stat_group()`), instead of silently ignoring a
+  `group` mapping
++ `fill` is accepted only where the drawing primitive has an interior separate
+  from its border (`bb_density()`, `bb_tile()`, a custom `bb_layer()`); passing
+  it to another layer is an error naming `col`, instead of being silently
+  dropped by the base function
++ mapped aesthetics are resolved when the plot is drawn, so the scale in effect
+  is the last one in the `+` chain. `bb_point()` and `bb_layer()` no longer
+  freeze a mapped colour at the moment the layer is added
+
+## Boundaries
+
++ `+` now refuses to combine two complete `bbplot` objects with a message that
+  points to `aplot::plot_list()`; previously it failed with an internal
+  `UseMethod("bbplot_add")` error
++ `+` accepts bare calls (e.g. `quote(points(...))`) like formulas and
+  expressions
++ new `bb_layer(draw, mapping, data, inherit, ..., name, limits)` is the
+  supported custom-layer entry point: it inherits data and mapping, draws in `+`
+  order, honours constants, and propagates errors unchanged. Its mapped `x`/`y`
+  values contribute to the ranges and its `data` follows the facets; ranges that
+  the drawing function computes itself (a reference line, a band) are declared
+  with `limits = list(x = ..., y = ...)` and then take part in the canvas. The
+  scales and the legend are not extended
+
+## Documentation
+
++ the vignette was rewritten from scratch around the grammar (plot object and
+  components, data and mapping, inheritance, constants, order, scales/legends,
+  facets, statistical layers, custom layers and the base graphics escape hatch)
+  instead of being extended section by section, with each rule explained in
+  prose as well as demonstrated, plus a one-page contract recap and an error
+  message guide
++ new `notes/0.2.5-inventory.md` records the inventory of delivered features and
+  their support status, which the vignette is checked against
++ all layer help pages document `inherit`; `bbplot()` documents the `+` and
+  inheritance rules; the vignette lists which aesthetics each layer maps
++ known limit, stated rather than hidden: a mapped `lty` is read by the legend
+  but not yet applied by the line-based layers (0.3.0 scale work)
+
+## Tests
+
++ new `test-grammar.R` covers mapping override, `inherit = FALSE`, layer data in
+  ranges and facets (including facet-column subsetting), constants versus the
+  last scale, grouped histogram/density behaviour, draw order, graphics-state
+  restoration after a layer error, `bb_layer()` and the boundary of `+`
+
 # plotbb 0.2.0
 
 ## Graphics state

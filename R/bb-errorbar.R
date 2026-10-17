@@ -2,17 +2,20 @@
 ##' @param orientation one of 'y' or 'x'
 ##' @param width bar width or errorbar cap width
 ##' @export
-bb_errorbar <- function(mapping = NULL, data = NULL, orientation = "y", width = 0.5, ...) {
-    build_layer(mapping, data, ..., layer = ly_errorbar, orientation = orientation, width = width)
+bb_errorbar <- function(mapping = NULL, data = NULL, orientation = "y", width = 0.5,
+                        inherit = TRUE, ...) {
+    build_layer(mapping, data, inherit = inherit, ..., layer = ly_errorbar,
+                orientation = orientation, width = width)
 }
 
-ly_errorbar <- function(plot, mapping = NULL, data = NULL, orientation = "y", width = 0.5, ...) {
+ly_errorbar <- function(plot, mapping = NULL, data = NULL, orientation = "y", width = 0.5,
+                        inherit = TRUE, ...) {
     orientation <- match.arg(orientation, c("y", "x"))
 
     data <- bb_layer_data(plot, data, mapping)
-    mapping <- bb_mapping(plot, mapping)
-
     params <- list(...)
+    mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+
 
     if (orientation == "y") {
         x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
@@ -41,6 +44,7 @@ ly_errorbar <- function(plot, mapping = NULL, data = NULL, orientation = "y", wi
         x <- x[ok]
         ymin <- ymin[ok]
         ymax <- ymax[ok]
+        params <- bb_layer_constants(params, ok, n)
 
         ly <- function() {
             col_vec <- NULL
@@ -86,6 +90,7 @@ ly_errorbar <- function(plot, mapping = NULL, data = NULL, orientation = "y", wi
     y <- y[ok]
     xmin <- xmin[ok]
     xmax <- xmax[ok]
+    params <- bb_layer_constants(params, ok, n)
 
     ly <- function() {
         col_vec <- NULL

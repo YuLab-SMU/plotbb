@@ -7,11 +7,12 @@ date: today
 format:
   html:
     toc: true
+    toc-depth: 3
 execute:
   message: false
   warning: false
-  fig-width: 12
-  fig-height: 9
+  fig-width: 10
+  fig-height: 7
 knitr:
   opts_chunk:
     out.width: "100%"
@@ -20,6 +21,37 @@ vignette: >
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
+
+plotbb puts a small grammar of graphics on top of R's base graphics. It is not
+a replacement for base graphics and not a reimplementation of ggplot2: a
+`bbplot` is still drawn by `graphics::points()`, `lines()`, `rect()` and
+`polygon()`, and any base call can still be used. What the grammar adds is a
+way to say *what* a figure is made of — data, mappings, layers, scales, labels,
+facets — and a set of rules that make those pieces combine predictably.
+
+This release (0.2.5) is about the rules, not about new geometry. The vignette is
+therefore organised the way the grammar is meant to be learned rather than the
+way the functions are exported. Every section states a rule, shows it in a
+running example, and then says what the rule implies — including where it stops.
+The reference at the end lists the layers, the aesthetics they map, and the
+known limits, so that a future version can extend this document without
+rewriting it.
+
+A note on reading: every code block runs with the package as installed, in
+order, on the same small set of data (`mtcars`, plus a few summaries built from
+it). The object `p` is introduced once and reused — redefined once, in the
+section on inheritance, to add a colour mapping — so later chunks can focus on
+the component being discussed instead of re-stating the whole plot. Terms are
+used in a fixed sense throughout: a **plot object** is the description returned
+by `bbplot()`; a **component** is anything added with `+`; a **layer** is a
+component that draws data; a **mapping** is an expression in `bb_aes()`; a
+**constant** is a fixed value such as `col = "tomato"`. "Stable" means the
+behaviour is documented and tested here; anything planned for a later release is
+marked as such and is not written as if it already worked.
+
+Some familiarity with base graphics is assumed — enough to know that `par()`
+changes device state and that `points()` draws on top of whatever is already
+there. The grammar does not hide those mechanics; it gives them a structure.
 
 ```{r}
 #| label: setup
@@ -30,364 +62,763 @@ if (nzchar(r_libs)) {
   libs <- libs[nzchar(libs)]
   .libPaths(c(libs, .libPaths()))
 }
+library(plotbb)
+library(aplot)
 library(dplyr)
-library(plotbb)
 ```
 
-## Aesthetic mapping
+## The grammar in one page
 
-`bb_aes()` for aesthetic mapping, that equivalents to `ggplot2::aes()`.
+A plot is a **plot object** plus a series of **components** added with `+`:
 
-```{r plotbb-aes}
-library(plotbb)
+1. `bbplot(data, mapping)` creates the object: the data every layer can see and
+   the mapping every layer can inherit.
+2. Layers (`bb_point()`, `bb_line()`, `bb_bar()`, ...) are added to it. Each
+   layer may bring its own `data` and `mapping`, and draws in the order it was
+   added.
+3. Non-layer components change the figure rather than draw data: labels,
+   themes, scales, legends, facets and grid lines.
 
+The separation matters. A layer is the only kind of component that consumes
+data; everything else adjusts the canvas, the decorations or the mapping from
+values to ink. That is why a scale can be added after the layer that uses it,
+and why a theme does not need to know which layers exist. It also explains the
+division of labour between `bbplot()` and the layers: `bbplot()` sets the
+defaults, and each layer says what it contributes on top of them.
+
+The plot object is a description, not a drawing. Nothing is rendered when the
+object is built; it is drawn when you `print()` it (or at the end of an
+expression in a document such as this one). This deferred drawing is what makes
+it possible to add a scale after a layer and still have the layer use it. It is
+also where the graphics parameters are restored: `print.bbplot()` snapshots
+`par()`, draws, and restores the snapshot, so a `bbplot` never leaves the device
+dirty — not even when a layer fails.
+
+`+` is therefore deliberately narrow: it adds one component to one plot. It is
+not a layout operator and does not merge two complete plots; for several plots
+side by side, build them separately and arrange them with `aplot::plot_list()`
+as the examples below do. Third-party packages can still extend the set of
+components: implement `bbplot_add()` for your class and return the modified
+plot.
+
+```{r plotbb-minimal}
+p <- bbplot(mtcars, bb_aes(mpg, disp))
+p + bb_point(pch = 19)
+```
+
+## Data and mapping
+
+`bb_aes()` records *mappings*: expressions evaluated against the data, not
+values computed now. `bb_aes(mpg, disp)` means "the columns `mpg` and `disp`",
+and `bb_aes(mpg, log(disp))` works as well because the expression is evaluated
+per layer, in the layer's data. The practical consequence is that a mapping is
+portable: the same `bb_aes(mpg, disp)` can be inherited by a layer that brings a
+different data frame, and it will resolve against that frame.
+
+`bb_aes()` captures only the aesthetics you actually write. There is no
+inheritance inside `bb_aes()` itself and no silent completion of missing
+aesthetics: a layer that needs `x` and `y` but receives neither fails with a
+message, instead of quietly plotting against an index. This is intentional —
+the grammar is explicit about what is mapped rather than guessing.
+
+```{r plotbb-mapping}
+bbplot(mtcars, bb_aes(mpg, log(disp), col = factor(cyl))) +
+  bb_point(pch = 19)
+```
+
+A mapping can also refer to objects from the calling environment; it is not
+restricted to columns of the data. The expression keeps the environment it was
+written in, so a variable defined just before the plot is visible inside the
+layer. This is convenient for thresholds and highlights, and it is also the
+reason a mapping should not depend on objects that change after the plot is
+built: the expression is evaluated when the plot is drawn, in the layer's data,
+with that captured environment.
+
+```{r plotbb-mapping-env}
+highlight <- 300
+bbplot(mtcars, bb_aes(mpg, disp, col = disp > highlight)) +
+  bb_point(pch = 19)
+```
+
+## Layers override the plot mapping
+
+Every layer inherits the plot's `data` and `mapping`, and may override them.
+The inheritance is per aesthetic, not per mapping object: a local mapping is
+merged into the inherited one name by name. This is what lets a layer change the
+colour while keeping the coordinates, and it is why the examples below write
+`bb_aes(col = ...)` without repeating `x` and `y`.
+
+* A local **mapping** overrides the global mapping **aesthetic by aesthetic**.
+  `bb_point(bb_aes(col = factor(am)))` keeps the inherited `x` and `y` and
+  replaces only `col`.
+* A local **data** replaces the plot data for that layer and contributes to
+  the axis ranges. When the layer data carries the facet variable, each
+  `bb_facet_wrap()` panel takes the rows with that panel's value; row-aligned
+  data with the same number of rows as the plot data follows the panel row
+  positions instead.
+* `inherit = FALSE` turns the inheritance off: the layer then uses only its own
+  mapping. Its data still comes from the plot unless you pass `data`.
+
+The asymmetry between mapping and data is deliberate. A mapping is the part of
+the plot that changes how values become ink, so a layer that opts out should
+state it completely; data is the part that says which observations exist, and a
+layer that only wants to add an annotation should not have to copy the frame it
+was already given. `data` defaults to inheritance, and only an explicit `data =`
+replaces it.
+
+```{r plotbb-override}
 p <- bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl)))
-p + bb_grid(col = "grey50", lty = "dashed") + bb_point(pch = 19)
+
+a <- p + bb_point(pch = 19)                                  # inherit everything
+b <- p + bb_point(bb_aes(col = factor(am)), pch = 19)        # override col only
+c <- p + bb_point(bb_aes(mpg, disp), inherit = FALSE, pch = 19)  # no inheritance
+
+plot_list(a, b, c, ncol = 3, tag_levels = "A")
 ```
 
-## Geometric layer
+A second data frame is a normal layer argument. Here the points come from the
+plot data and the group means come from a summary that the layer brings itself;
+the axis ranges cover both.
 
-```{r plotbb-layer}
-#| fig-height: 4
-p2 <- p + bb_point() + bb_lm(bb_aes(group = cyl), lwd = 2)
-p3 <- p2 + bb_lm(col = "red", lwd = 3, lty = "dotted")
-p4 <- p + bb_text(bb_aes(label = cyl), cex = 2)
-aplot::plot_list(p2, p3, p4, ncol = 3, tag_levels = "A")
+```{r plotbb-layer-data}
+means <- mtcars %>%
+  group_by(cyl) %>%
+  summarise(mpg = mean(mpg), disp = mean(disp), .groups = "drop")
+
+bbplot(mtcars, bb_aes(mpg, disp)) +
+  bb_point(pch = 19, col = "grey60") +
+  bb_point(bb_aes(mpg, disp), data = means, col = "firebrick", pch = 17, cex = 2)
 ```
 
-### Line, segment and errorbar
+With `inherit = FALSE` the layer has to state everything it draws. Leaving `x`
+and `y` out is an error rather than a silent fallback to the global mapping,
+because a layer that draws nothing is harder to diagnose than a layer that says
+which mapping it is missing:
 
-```{r plotbb-line-seg-errorbar}
-d2 <- group_by(mtcars, cyl) %>%
-  summarize(
-    x = cyl[1],
-    y = mean(disp),
-    sd = sd(disp)
-  )
+```{r plotbb-inherit-false}
+#| error: true
+p + bb_point(bb_aes(col = factor(am)), inherit = FALSE)
+```
 
-g1 <- bbplot(d2, bb_aes(x, y)) +
-  bb_line(col = "grey50") +
-  bb_point(pch = 19, cex = 1.5) +
-  bb_errorbar(bb_aes(ymin = y - sd, ymax = y + sd), width = 0.8)
+## Constants are not mappings
 
-seg <- data.frame(x = 15, y = 150, xend = 30, yend = 450)
-g2 <- bbplot(seg, bb_aes(x, y)) +
+A mapping varies with the data; a constant does not. Both are written in the
+layer call, but they mean different things, and the difference is the one most
+often worth getting right. Think of a mapped aesthetic as a *question asked of
+the data* ("which colour does this row get?") and a constant as a *parameter of
+the pen* ("this layer is drawn in firebrick"). The first can be trained by a
+scale and summarised in a legend; the second cannot, because there is nothing to
+train.
+
+* `bb_point(bb_aes(col = factor(cyl)))` — **mapped**: the colour follows the
+  scale and the legend.
+* `bb_point(col = "tomato")` — **constant**: the whole layer is one colour. It
+  is not trained by a scale and is not repainted by one, even if the scale or
+  the legend is added later in the `+` chain.
+
+```{r plotbb-constant}
+pal <- c(`4` = "#1b9e77", `6` = "#d95f02", `8` = "#7570b3")
+
+mapped <- p + bb_point(pch = 19) + bb_scale_col_manual(pal)
+constant <- p + bb_point(pch = 19, col = "firebrick") + bb_scale_col_manual(pal)
+
+plot_list(mapped, constant, ncol = 2, tag_levels = "A")
+```
+
+When an aesthetic is both mapped and given as a constant on the same layer, the
+constant wins. The constant is the more specific statement — it is written for
+this layer, at this point in the call — while the mapping is a default that the
+layer chose to override:
+
+```{r plotbb-constant-wins}
+p + bb_point(pch = 19, col = "tomato")
+```
+
+A constant does more than win the draw: it **removes the mapping of that
+aesthetic for the layer**. The aesthetic is not trained by a scale, not redrawn
+by a later scale, and — for the statistical layers — it does not group either.
+The rule is applied once, before the layer is built, so every layer follows it.
+
+Aesthetics that can be both mapped and fixed are `col`, `fill`, `pch`, `lty`,
+`cex` and (for text) `label`. For a layer that draws one element per row, a
+constant is either a single value or one value per drawn row; a row-aligned
+constant follows the same rows as the data, so dropping rows with `NA` or
+infinite coordinates never shifts it onto the wrong point. Any other length is
+an error, not silently recycled.
+
+```{r plotbb-constant-length}
+#| error: true
+p + bb_point(col = c("red", "blue"))
+```
+
+```{r plotbb-constant-aligned}
+d <- data.frame(x = c(1, NA, 3), y = c(1, 2, 3))
+bbplot(d, bb_aes(x, y)) +
+  bb_point(col = c("red", "green", "blue"), pch = 19, cex = 2)
+```
+
+The second point is dropped, and the third keeps its own colour: the constant
+vector is row-aligned, not recycled.
+
+Summary layers are the exception, because their constants are graphical
+parameters rather than row-level aesthetics: `bb_hist()` and `bb_density()` use
+`col`/`fill` as the fill of the bars or polygon, and `bb_boxplot()`/`bb_bar()`
+use `col` for one box or bar each. There a vector means one value per bar, box
+or group, exactly as in the base function they wrap.
+
+## Order of layers
+
+Layers are drawn in the order they were added, so later layers sit on top.
+Moving a layer in the chain changes what covers what, and nothing else. There is
+no z-order attribute, no priority number and no automatic reordering: the `+`
+chain *is* the drawing order. This is the base graphics model kept intact, and
+it is the reason semi-transparent fills behave the way they do — two overlapping
+polygons mix in the order they are drawn.
+
+```{r plotbb-order}
+points_then_fit <- bbplot(mtcars, bb_aes(mpg, disp)) +
+  bb_point(pch = 19, col = "grey50") +
+  bb_lm(col = "firebrick", lwd = 2)
+
+fit_then_points <- bbplot(mtcars, bb_aes(mpg, disp)) +
+  bb_lm(col = "firebrick", lwd = 2) +
+  bb_point(pch = 19, col = "grey50")
+
+plot_list(points_then_fit, fit_then_points, ncol = 2, tag_levels = "A")
+```
+
+## Components that are not layers
+
+`+` also accepts components that change the figure instead of drawing data.
+Most of them take effect when the component is added, so their position in the
+chain is not significant; where order does matter it is stated explicitly. The
+two notable cases are labels, which are last-one-wins, and scales, which are
+read when the plot is drawn so the last scale for an aesthetic is the one in
+effect. Themes are applied at the start of drawing, which is why a theme can be
+added after the layers it affects.
+
+```{r plotbb-components}
+p +
+  bb_grid(col = "grey85", lty = "dashed") +
   bb_point(pch = 19) +
-  bb_segment(bb_aes(xend = xend, yend = yend), lwd = 3, col = "steelblue")
-
-aplot::plot_list(g1, g2, ncol = 2, tag_levels = "A")
+  bb_labs(title = "mtcars", sub = "displacement versus mileage",
+          xlab = "miles per gallon", ylab = "displacement") +
+  bb_theme_minimal()
 ```
 
-### Bar plot
+### Labels
 
-```{r plotbb-bar}
-mtcars$cyl <- factor(mtcars$cyl, levels = c(8, 4, 6))
-bbplot(mtcars, bb_aes(cyl, col = cyl)) +
-  bb_bar(stat = "count") +
-  bb_legend(position = "topleft")
+`bb_labs()` sets several labels at once; `bb_title()`, `bb_sub()`, `bb_xlab()`
+and `bb_ylab()` set one each. A later label replaces an earlier one for the same
+element. Labels are not drawn by the layers: they are applied once, after the
+layers, by the plot's print method, so they always sit above the data and cannot
+be covered by a later layer.
+
+### Theme
+
+`bb_theme()` takes `graphics::par()` settings and applies them to this plot
+only. A theme has no side effect on the device: it is applied when the plot is
+drawn and the previous parameters are restored afterwards, also when a layer
+fails. That is what makes predefined themes safe to reuse, and it is why the two
+plots below can share a device without the first one's background leaking into
+the second.
+
+This behaviour is the difference between the grammar and calling `par()`
+directly. `par()` is device state: it persists until something resets it, so a
+plot that changes it affects whatever is drawn next. A theme is plot state: it
+travels with the object, is applied inside the print method, and is undone
+before control returns. If you find yourself wanting `par()` outside the plot,
+the device-level themes below are the supported way to express it.
+
+```{r plotbb-theme}
+a <- p + bb_point(pch = 19) + bb_theme(bg = "lemonchiffon", mar = c(4, 4, 3, 1)) +
+  bb_title("bb_theme()")
+b <- p + bb_point(pch = 19) + bb_title("untouched device")
+plot_list(a, b, ncol = 2, tag_levels = "A")
 ```
 
-```{r plotbb-bar-identity}
-dbar <- group_by(mtcars, cyl) %>%
-  summarize(mpg = mean(mpg), .groups = "drop")
-bbplot(dbar, bb_aes(cyl, mpg, col = cyl)) +
-  bb_bar() +
-  bb_legend(position = "topleft")
+Presets are combinations of `bb_theme()` settings:
+
+```{r plotbb-theme-presets}
+a <- p + bb_point(pch = 19, cex = 1.6) + bb_theme_expand() + bb_theme_deepblue() +
+  bb_title("bb_theme_deepblue()")
+b <- p + bb_point(pch = 19) + bb_theme_minimal() + bb_title("bb_theme_minimal()")
+c <- p + bb_point(pch = 19) + bb_theme_bw() + bb_title("bb_theme_bw()")
+d <- p + bb_point(pch = 19) + bb_theme_grey() + bb_title("bb_theme_grey()")
+plot_list(a, b, c, d, ncol = 2, tag_levels = "A")
 ```
 
-### Boxplot and histogram
+### Device-level themes
 
-```{r plotbb-boxplot}
-bbplot(mtcars, bb_aes(factor(cyl), mpg)) +
-  bb_boxplot(fill = "grey90")
-```
-
-```{r plotbb-hist}
-bbplot(mtcars, bb_aes(mpg)) +
-  bb_hist(col = "grey80", border = "white")
-```
-
-### Significance annotations
-
-```{r plotbb-signif}
-bbplot(mtcars, bb_aes(factor(cyl), mpg)) +
-  bb_boxplot(fill = "grey90") +
-  bb_signif(comparisons = list(c("4", "6"), c("4", "8")))
-```
-
-### Heatmap
-
-```{r plotbb-heatmap}
-#| fig-height: 12
-df <- data.frame(
-  x = rep(1:10, 12),
-  y = rep(1:12, each = 10),
-  values = rnorm(120, mean = 10, sd = 5),
-  type = sample(LETTERS[1:5], 120, replace = TRUE),
-  stringsAsFactors = FALSE
-)
-
-h1 <- bbplot(df, bb_aes(x, y, col = values)) + bb_tile() +
-  bb_title("heatmap for continuous numerical values")
-h2 <- bbplot(df, bb_aes(x, y, col = values)) + bb_tile() + bb_scale_col_palette("YlOrRd") +
-  bb_title("applying a color palette")
-h3 <- bbplot(df, bb_aes(x, y, col = type)) + bb_tile() +
-  bb_title("heatmap for discrete categorical values")
-h4 <- bbplot(df, bb_aes(x, y, col = values)) + bb_tile() + bb_text(col = "black") +
-  bb_title("heatmap with text labels") + bb_theme_expand()
-aplot::plot_list(h1, h2, h3, h4, ncol = 2, tag_levels = "A")
-```
-
-### Supported layers
-
-+ [x] bb_grid
-+ [x] bb_point
-+ [x] bb_lm
-+ [x] bb_text
-+ [x] bb_tile
-+ [x] bb_line
-+ [x] bb_segment
-+ [x] bb_errorbar
-+ [x] bb_bar
-+ [x] bb_boxplot
-+ [x] bb_hist
-+ [x] bb_facet_wrap
-+ [x] bb_signif
-+ [x] bb_density
-
-
-## Setting labels
-
-```{r plotbb-labs}
-p2 + bb_labs(
-  title = "hello",
-  sub = "just for demo",
-  xlab = "this is xlab",
-  ylab = "this is ylab"
-) +
-  bb_title("hello world")
-```
-
-## Graphics state
-
-`print()` restores the graphics parameters it changes, and does so even when a
-layer fails. This means a `bbplot` object never leaves `par()` behind for the
-next base plot.
-
-```{r plotbb-state}
-p <- bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl)))
-g1 <- p + bb_point(pch = 19) + bb_theme(bg = "lemonchiffon", mar = c(3, 3, 2, 1))
-g2 <- p + bb_point(pch = 19) + bb_title("par() was restored before this plot")
-aplot::plot_list(g1, g2, ncol = 2, tag_levels = "A")
-```
-
-`with_bb_theme()` applies a theme to the device for a block of code and
-restores the previous state afterwards, including when the code fails. Unlike
-`set_bb_theme()`, which changes the device until `unset_bb_theme()` is called,
-it leaves nothing behind and can be nested.
+When you want a theme to last beyond one plot, use `set_bb_theme()` and
+`unset_bb_theme()`, or `with_bb_theme()` for a block of code. `with_bb_theme()`
+restores the previous state even if the code fails, and can be nested: the
+restoration is scoped to the block rather than to the whole session, so a failed
+example does not leave the device in a different state than it found it.
 
 ```{r plotbb-with-theme}
 with_bb_theme(bb_theme_deepblue(), {
-  p + bb_point(pch = 19, cex = 2)
+  bbplot(mtcars, bb_aes(mpg, disp)) + bb_point(pch = 19, cex = 1.6)
 })
 ```
 
-## Reproducible jitter
+## Scales and legends
 
-Jittered points use a seed, so the same plot draws the same positions every
-time, and plotting never advances your random number stream.
+Scales translate a mapped aesthetic into values. They apply to mappings only:
+a constant aesthetic is never sent through a scale. A scale therefore needs two
+pieces of information — the aesthetic it governs, and the data the layer would
+have mapped — and both come from the plot object. This is why the same scale can
+be reused across plots that share a mapping, and why adding a scale to a plot
+with no matching mapping has no visible effect: there is nothing for it to
+translate.
 
-```{r plotbb-jitter}
-#| fig-height: 4
-d <- data.frame(g = rep(c("a", "b"), each = 40), y = rnorm(80))
-d$x <- as.integer(factor(d$g))
-a <- bbplot(d, bb_aes(x, y)) + bb_point(position = "jitter", seed = 1)
-b <- bbplot(d, bb_aes(x, y)) + bb_point(position = "jitter", seed = 2)
-aplot::plot_list(a, b, ncol = 2, tag_levels = "A")
-```
-
-## Theme
-
-```{r plotbb-theme}
-#| fig-height: 6
-g <- p2 +
-  bb_theme(
-    col.main = "red",
-    cex.main = 2,
-    mar = c(4, 4, 3, 1)
-  ) +
-  bb_title("applying graphics::par")
-g2 <- p2 + bb_title("theme has no side effect")
-aplot::plot_list(g, g2, ncol = 2, tag_levels = "A")
-```
-
-`bb_theme` has no side effect and will only apply to the `bbplot` object that it added to.
-This is very important for developing pre-defined themes.
-
-```{r plotbb-theme-expand}
-#| fig-height: 6
-p4 <- p3 + bb_theme_expand()
-aplot::plot_list(p4, p3, ncol = 2, tag_levels = "A")
-```
-
-```{r plotbb-theme-grey}
-p + bb_grid(col = "grey50", lty = "dashed") +
-  bb_point(pch = 19) +
-  bb_theme_expand() +
-  bb_theme_grey()
-```
-
-```{r plotbb-theme-blue}
-p + bb_point(pch = 19, cex = 2) +
-  bb_theme_expand() +
-  bb_theme_deepblue()
-```
-
-```{r plotbb-theme-bw-minimal}
-#| fig-height: 6
-g_bw <- p2 + bb_theme_expand() + bb_theme_bw() + bb_title("bb_theme_bw")
-g_min <- p2 + bb_theme_expand() + bb_theme_minimal() + bb_title("bb_theme_minimal")
-aplot::plot_list(g_bw, g_min, ncol = 2, tag_levels = "A")
-```
-
-### Supported themes
-
-+ [x] `bb_theme_expand`
-+ [x] `bb_theme_grey`
-+ [x] `bb_theme_deepblue`
-+ [x] `bb_theme_bw`
-+ [x] `bb_theme_minimal`
-
-## Scale
-
-
-### Supported scales
-
-+ [x] `bb_scale_col_palette`
-+ [x] `bb_scale_col_manual`
-+ [x] `bb_scale_col_gradient`
-+ [x] `bb_scale_pch_manual`
-+ [x] `bb_scale_lty_manual`
-+ [x] `bb_scale_cex_manual`
-+ [x] `bb_scale_cex_continuous`
-
-Color scales can be added anywhere in the `+` chain and will affect both layers and legends.
+Whether a mapping is treated as discrete or continuous follows the mapped
+values: `bb_aes(col = hp)` is numeric and gets a gradient, while
+`bb_aes(col = factor(cyl))` is discrete and gets one colour per level. Manual and
+paletted scales are for the discrete case; a gradient is for the continuous one.
 
 ```{r plotbb-scale-manual}
 pal <- c(`4` = "#1b9e77", `6` = "#d95f02", `8` = "#7570b3")
-bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl))) +
-  bb_point(pch = 19) +
-  bb_scale_col_manual(pal) +
-  bb_legend()
+p + bb_point(pch = 19) + bb_scale_col_manual(pal) + bb_legend()
 ```
+
+Continuous colour mappings interpolate between two colours:
 
 ```{r plotbb-scale-gradient}
 bbplot(mtcars, bb_aes(mpg, disp, col = hp)) +
   bb_point(pch = 19) +
-  bb_scale_col_gradient(low = "grey80", high = "firebrick") +
-  bb_legend()
+  bb_scale_col_gradient(low = "grey85", high = "firebrick") +
+  bb_legend(title = "horsepower")
 ```
 
-### Scales for pch, lty and cex
+Other aesthetics have their own scales, and each needs its own legend:
 
 ```{r plotbb-scale-aes}
-#| fig-width: 16
-p5 <- bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl), pch = factor(gear), cex = hp)) +
+a <- bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl), pch = factor(gear), cex = hp)) +
   bb_point() +
   bb_scale_cex_continuous(range = c(0.8, 2)) +
   bb_legend(aesthetic = "col", position = "topleft") +
   bb_legend(aesthetic = "pch", position = "bottomleft")
 
-p6 <- bbplot(mtcars, bb_aes(mpg, disp, lty = factor(gear))) +
+b <- bbplot(mtcars, bb_aes(mpg, disp, group = gear, col = factor(gear))) +
   bb_lm(lwd = 2) +
-  bb_scale_lty_manual(values = c(`3` = "solid", `4` = "dashed", `5` = "dotted")) +
-  bb_legend(aesthetic = "lty", position = "topleft")
+  bb_scale_col_manual(c(`3` = "#1b9e77", `4` = "#d95f02", `5` = "#7570b3")) +
+  bb_legend(position = "topleft")
 
-aplot::plot_list(p5, p6, ncol = 2, tag_levels = "A")
+plot_list(a, b, ncol = 2, tag_levels = "A")
 ```
 
-## Legend
+`bb_legend()` can also be placed outside the panel, which is useful when the
+data fill the plotting region:
 
-```{r plotbb-legend}
-p + bb_point(pch = 19) + bb_legend()
+```{r plotbb-legend-outside}
+p + bb_point(pch = 19) + bb_legend(aesthetic = "col", outside = TRUE)
 ```
 
-## Facet
+The legend reads the plot's mapping and data. It describes the whole plot, not
+the last layer, so a layer with its own `col` mapping is still explained through
+the plot-level mapping and scale. This is a deliberate simplification for now:
+the legend is a property of the plot, not of a layer, and it is built from the
+plot-level mapping even when some layers override it. A per-layer legend is part
+of the 0.3.0 scale work, together with the `fill` and `lty` questions listed at
+the end.
+
+## Facets
+
+`bb_facet_wrap()` splits the plot into panels by a formula. The formula is
+evaluated against the plot data to produce a panel key per row; the panels are
+the sorted unique keys. Because each panel draws the same plot object with a
+subset of the data, the layers, their order, and their constants apply unchanged
+inside every panel — faceting changes which rows a panel sees, not how a panel
+is drawn.
+
+Layer data follows the panels: each panel takes the rows of the layer data that
+carry the panel's facet value. Row-aligned layer data with the same number of
+rows as the plot data falls back to the panel row positions, and a layer with no
+rows in a panel is simply absent from that panel. Data that has neither the
+facet variable nor the same row count cannot be split, so it is drawn in every
+panel and the plot warns instead of failing silently. The three cases are worth
+keeping in mind when a layer brings its own summary: giving it the facet column
+is always the safest option.
+
+The formula is evaluated as an expression. The same expression is reused on each
+layer's data, so a combined or transformed key behaves the same for the plot data
+and for a layer that brings its own rows.
 
 ```{r plotbb-facet}
-#| fig-height: 4
 p + bb_point(pch = 19) + bb_facet_wrap(~cyl, ncol = 3)
 ```
 
+By default all panels share one range, which makes the panels comparable. A
+free scale computes the range per panel from that panel's data (including layer
+data), which makes each panel use its space fully but hides differences in
+level. The choice is a reading decision, not a cosmetic one; the grammar only
+provides the switch.
+
 ```{r plotbb-facet-free}
-#| fig-height: 4
-p + bb_point(pch = 19) + bb_facet_wrap(~cyl, ncol = 3, scales = "free_y")
+p + bb_point(pch = 19) + bb_facet_wrap(~am, ncol = 2, scales = "free_y")
 ```
 
-## Using existing code with plotbb
+Because the facet is an ordinary expression, a combined key needs no special
+syntax:
 
-Suppose we have existing code to plot something:
-
-```r
-plot(mtcars$mpg, mtcars$disp)
-abline(lm(disp ~ mpg, data = mtcars), col = "red")
+```{r plotbb-facet-multi}
+p + bb_point(pch = 19) +
+  bb_facet_wrap(~paste(cyl, am, sep = "/"), ncol = 2)
 ```
 
-We can wrap the codes into a function:
+## Statistical and annotation layers
 
-```{r}
-f <- function() {
-  plot(mtcars$mpg, mtcars$disp)
-  abline(lm(disp ~ mpg, data = mtcars), col = "red")
-}
+The statistical layers take the same data and mapping arguments as the
+geometric ones and contribute their own ranges. "Statistical" here means that
+the layer computes something from the rows before drawing: a histogram bins a
+numeric variable, a density estimates its distribution, a boxplot summarises it
+by group, a fitted line estimates a trend, and `bb_signif()` draws comparisons.
+There is no separate statistic API to learn — the summary is part of the layer,
+and its result is what takes part in the ranges.
+
+`bb_hist()` and `bb_density()` share one grouping rule: a discrete `x` groups the
+numeric variable, otherwise an explicit `group` mapping wins, then `col`, then
+`fill`. A constant colour is never a grouping. The rule is stated once and used
+both when drawing and when computing the range, so a grouped histogram is
+scaled to the tallest single group rather than to the pooled counts.
+
+Two consequences follow from summarising. First, a summary layer consumes rows,
+not just coordinates, so `bb_hist()` needs one numeric variable and does not
+accept the `y` of a scatter plot as a second dimension — the `y` is the variable
+being summarised when `x` is discrete. Second, constants on a summary layer are
+graphical parameters for the resulting bars, boxes or polygons rather than
+row-level aesthetics, which is why they are documented separately from the
+per-row layers.
+
+```{r plotbb-stat-layers}
+a <- bbplot(mtcars, bb_aes(factor(cyl), mpg)) + bb_boxplot(col = "grey90")
+b <- bbplot(mtcars, bb_aes(mpg)) + bb_hist(col = "grey80", border = "white")
+c <- bbplot(mtcars, bb_aes(mpg)) + bb_density(fill = "steelblue", alpha = 0.5)
+d <- bbplot(mtcars, bb_aes(factor(cyl), mpg, fill = factor(cyl))) +
+  bb_density(alpha = 0.5) + bb_legend(aesthetic = "fill")
+plot_list(a, b, c, d, ncol = 2, tag_levels = "A")
 ```
 
-Then we can convert it to a `bbplot` object. The plot produced by the function will be used as the canvas, and we can apply theme and add layers to it:
+```{r plotbb-signif}
+bbplot(mtcars, bb_aes(factor(cyl), mpg)) +
+  bb_boxplot(col = "grey90") +
+  bb_signif(comparisons = list(c("4", "6"), c("4", "8")))
+```
 
-```{r}
-library(dplyr)
-d <- group_by(mtcars, cyl) %>%
-  summarize(xm = mean(mpg), ym = mean(disp))
+`bb_signif()` is the one layer whose "data" is not a variable but a set of
+comparisons; it draws brackets above the data and extends the `y` range so they
+are not clipped. Its aesthetics are constants (`col`, `cex`, `lty`, ...) rather
+than mappings, because there is no per-row value to map.
 
-pp <- as.bbplot(f) +
+Fitted lines, intervals and errors follow the same pattern: the layer computes
+the summary and contributes both the summary and its uncertainty to the range.
+
+```{r plotbb-lm-errorbar}
+means <- mtcars %>%
+  group_by(cyl) %>%
+  summarise(x = cyl[1], y = mean(disp), sd = sd(disp), .groups = "drop")
+
+a <- bbplot(means, bb_aes(x, y)) +
+  bb_line(col = "grey50") +
+  bb_point(pch = 19, cex = 1.5) +
+  bb_errorbar(bb_aes(ymin = y - sd, ymax = y + sd), width = 0.8)
+
+b <- bbplot(mtcars, bb_aes(mpg, disp, group = cyl, col = factor(cyl))) +
+  bb_point() +
+  bb_lm(lwd = 2, se = TRUE)
+
+plot_list(a, b, ncol = 2, tag_levels = "A")
+```
+
+## Heatmaps
+
+`bb_tile()` draws one rectangle per row, positioned at the `x`/`y` coordinates
+and filled with the `col` (or `fill`) aesthetic. It is the one geometric layer
+where `fill` and `col` mean the same thing — both name the interior of the
+rectangle — and it is the simplest way to see a continuous mapping with and
+without a palette. Because each tile is independent, a scale applies per tile,
+and a constant fills all of them the same way.
+
+```{r plotbb-tile}
+df <- expand.grid(x = 1:8, y = 1:6)
+df$value <- with(df, x * y) + rnorm(nrow(df), sd = 3)
+
+a <- bbplot(df, bb_aes(x, y, col = value)) + bb_tile() +
+  bb_title("continuous mapping")
+b <- bbplot(df, bb_aes(x, y, col = value)) +
+  bb_tile() +
+  bb_scale_col_palette("YlOrRd") +
+  bb_title("with a palette")
+c <- bbplot(df, bb_aes(x, y, col = value)) +
+  bb_tile() +
+  bb_text(bb_aes(label = round(value)), col = "black", cex = 0.7) +
   bb_theme_expand() +
-  bb_theme_grey() +
-  bb_lm(bb_aes(mpg, disp, group = cyl, col = factor(cyl)), data = mtcars, lwd = 2, lty = "dashed") +
-  bb_point(bb_aes(xm, ym, col = factor(cyl)), data = d, pch = 19, cex = 2) +
-  bb_title("hello plotbb") +
-  bb_grid(col = "grey30", lty = "dashed")
+  bb_title("with text labels")
+plot_list(a, b, c, ncol = 3, tag_levels = "A")
 ```
 
-As there are many features currently not available, `plotbb` supports adding layers using base graphics commands that you are already familiar with. Any base graphics commands in formula, expression or function can be served as layer to be added to a `bbplot` object.
+## Writing your own layer
 
-```{r plotbb-base}
-pp + (~points(30, 400, pch = 19, col = "red", cex = 3)) +
-  ~text(30, 420, label = "have fun :)", col = "blue", cex = 1.2)
+`bb_layer()` is the supported extension point. It takes a drawing function and
+runs it inside the grammar: the function receives the resolved `x`/`y`, the
+mapped aesthetics that were not overridden by a constant, and the fixed
+aesthetics you pass in `...`.
+
+The contract is the same one the built-in layers follow, and it is worth
+spelling out because it determines what a custom layer can and cannot do:
+
+* **data and mapping** are inherited from `bbplot()` unless the layer brings its
+  own, and `inherit = FALSE` has the same meaning as elsewhere;
+* **aesthetics** are resolved when the plot is drawn, so a scale added later
+  still applies, and a constant wins over a mapping exactly as in the built-in
+  layers;
+* **drawing** happens in `+` order and receives the same rows that survived
+  validation, with length-n constants already aligned to them;
+* **errors** propagate unchanged: the drawing function is ordinary R code, and
+  an error in it is reported as such, with the graphics state restored.
+
+What the layer does not get for free is the part the built-in layers implement
+for their own geometry: it does not extend the scales or the legend, and the
+coordinates it computes itself (a band, a curve, a reference line) do not widen
+the axes unless they are declared. Declaring them is what the second example
+does.
+
+```{r plotbb-custom-layer}
+bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl))) +
+  bb_layer(
+    function(x, y, col, size = 1, ...) {
+      graphics::points(x, y, col = col, pch = 19, cex = size)
+      graphics::points(x, y, col = "black", pch = 1, cex = size)
+    },
+    size = 1.5,
+    name = "hollow circles over points"
+  ) +
+  bb_legend()
 ```
 
-Here is another example to use `plotbb` with the `ape` package to visualize phylogenetic tree.
+A custom layer follows the rules of the grammar, and has the same limits:
 
-```{r plotbb-ape}
-#| fig-height: 8.5
-require(ape)
-set.seed(2020 - 09 - 10)
-x = rtree(10)
+* it inherits `data` and `mapping`, and accepts its own plus `inherit`;
+* it is drawn in `+` order, and its errors propagate unchanged;
+* it does **not** extend the scales or the legend automatically;
+* coordinates it computes itself do not widen the axes unless they are declared
+  with `limits`; mapped coordinates always count.
 
-p = as.bbplot(
-  function()
-    plot(
-      x,
-      cex = 2,
-      edge.width = 2,
-      edge.color = "white",
-      tip.color = "purple"
-    )
-)
-
-p + bb_theme_expand() + bb_theme_deepblue() +
-  (~nodelabels(node = 14, pie = matrix(rep(1, 4), 1), cex = 2)) +
-  (~nodelabels(node = 15, pie = matrix(rep(1, 3), 1), cex = 2)) +
-  (~nodelabels(node = 18, pie = matrix(rep(1, 5), 1), cex = 2)) +
-  bb_labs(title = "phylogenetic tree plotted by base graphics") +
-  bb_theme(col.main = "firebrick", cex.main = 2)
+```{r plotbb-custom-layer-limits}
+low <- subset(mtcars, mpg < 20)
+p_low <- bbplot(low, bb_aes(mpg, disp)) + bb_point(pch = 19)
+p_low +
+  bb_layer(
+    function(x, y, ...) graphics::abline(h = min(y) - 50, col = "firebrick", lty = 2),
+    limits = list(y = c(min(low$disp) - 50, max(low$disp)))
+  )
 ```
+
+Without `limits`, the same line would be drawn below the canvas and clipped.
+
+## The base graphics escape hatch
+
+For code that is not worth wrapping, `+` also accepts a function, a formula or
+an expression of base graphics calls. They are drawn in order, after the layers
+added before them, and behave like any other layer with respect to graphics
+state and error propagation. The difference between the three forms is only when
+the code is evaluated: a function is called at drawing time, while a formula or
+a quoted expression is evaluated when it is added, in the calling environment.
+The formula form is convenient for one or two calls; anything that needs
+arguments, loops or intermediate variables is clearer as `bb_layer()`.
+
+These escape hatches are powerful and intentionally unvalidated. The grammar
+does not know what a raw base call will draw, so it cannot contribute its
+coordinates to the ranges, cannot tell whether it uses the data, and cannot
+check its aesthetics. That is the trade: full access to base graphics, no
+grammar guarantees. When the drawing should participate in ranges, facets or
+scales, wrap it in `bb_layer()` and declare what it needs.
+
+```{r plotbb-escape}
+bbplot(mtcars, bb_aes(mpg, disp)) +
+  bb_point(pch = 19) +
+  (~abline(stats::lm(disp ~ mpg, data = mtcars), col = "firebrick", lwd = 2)) +
+  (~text(30, 450, label = "base graphics still work", col = "steelblue"))
+```
+
+Existing plotting code can become the canvas itself with `as.bbplot()`. The
+function you pass draws the background; layers, themes and labels are then
+added on top of it. A canvas does not carry data, so a layer added to it must be
+given `data =` explicitly — that is the one place where the usual inheritance of
+data has nothing to inherit:
+
+```{r plotbb-as-bbplot}
+draw_background <- function() {
+  plot(mtcars$mpg, mtcars$disp, pch = 19, col = "grey75",
+       xlab = "", ylab = "")
+  abline(stats::lm(disp ~ mpg, data = mtcars), col = "firebrick")
+}
+
+as.bbplot(draw_background) +
+  bb_lm(bb_aes(mpg, disp), data = mtcars, lwd = 2, se = FALSE,
+        col = "steelblue") +
+  bb_title("a base plot turned into a bbplot") +
+  bb_theme_minimal()
+```
+
+A third-party package can add its own component type by implementing
+`bbplot_add()` for its class; the method receives the object and the plot and
+must return the plot.
+
+## A complete workflow
+
+Putting the rules together: data, inherited mapping, a layer with its own data,
+constants for the annotations, then labels, a scale, a legend and a theme.
+
+Read the chain as a sequence of decisions. `bbplot()` fixes the data and the
+default mapping, including the colour that will be scaled. The first `bb_point()`
+inherits both and only adds a shape and a size, so the points follow the colour
+mapping. The second `bb_point()` replaces the data but keeps the inherited
+mapping, which is why the group means are positioned correctly and drawn as a
+different shape without restating `x` and `y`. `bb_lm()` uses the same inherited
+mapping to fit one line per colour group. The scale then translates the mapped
+`cyl` values, and the legend names them; because both are added after the
+layers, this is a compact demonstration of deferred drawing. Labels and theme
+come last because they affect the frame rather than the data.
+
+```{r plotbb-workflow}
+means <- mtcars %>%
+  group_by(cyl) %>%
+  summarise(mpg = mean(mpg), disp = mean(disp), .groups = "drop")
+
+bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl))) +
+  bb_point(pch = 19, cex = 0.8) +
+  bb_point(bb_aes(mpg, disp), data = means, pch = 17, cex = 2.2) +
+  bb_lm(lwd = 1.5, se = FALSE) +
+  bb_scale_col_manual(c(`4` = "#1b9e77", `6` = "#d95f02", `8` = "#7570b3")) +
+  bb_legend(title = "cylinders") +
+  bb_labs(title = "mtcars", xlab = "miles per gallon", ylab = "displacement") +
+  bb_theme_minimal()
+```
+
+## The contract at a glance
+
+The rules above, collected in one place. Each one is implemented once in the
+package, tested, and used by every layer; the sections above show it in action.
+
+1. **A plot is an object plus components.** `bbplot()` sets the data and the
+   default mapping; `+` adds one component to one plot. Printing draws and
+   restores the graphics state.
+2. **Layers inherit `data` and `mapping`.** A local mapping overrides the
+   inherited one aesthetic by aesthetic. `inherit = FALSE` removes the inherited
+   mapping but keeps the inherited data unless `data` is given.
+3. **Layer data is first-class.** It participates in the axis ranges and in
+   `bb_facet_wrap()`; a panel takes the rows that carry its facet value,
+   otherwise row-aligned data follows the panel positions, otherwise the plot
+   warns and draws the layer unsplit.
+4. **Constants win, and they remove the mapping.** A constant aesthetic is not
+   trained by a scale, is not repainted by a later one, and does not group a
+   statistical layer. Length-n constants are row-aligned and follow the rows
+   that survive validation.
+5. **Order is drawing order.** There is no other ordering; later layers cover
+   earlier ones.
+6. **Scales translate mappings at draw time.** The last scale for an aesthetic
+   is the one in effect; constants never go through a scale. A legend describes
+   the plot-level mapping.
+7. **Themes are plot state, not device state.** They are applied while drawing
+   and restored afterwards, also on error. Device-level themes are explicit and
+   scoped.
+8. **Custom layers get the grammar, not the geometry.** `bb_layer()` inherits
+   data and mapping, honours constants, draws in order and propagates errors.
+   It must declare with `limits` the coordinates it computes itself, and it does
+   not extend scales or legends.
+9. **The escape hatches are unvalidated.** Functions, formulas and expressions
+   draw in order and share the graphics-state contract, but they are not part of
+   the range, scale or facet machinery.
+
+## When something goes wrong
+
+The error messages are written to point back at a rule. A short map:
+
+* `requires data: supply it in bbplot() or through the layer's data argument` —
+  the plot has no data to inherit, which is normal for a layer added to an
+  `as.bbplot()` canvas. Pass `data =` to that layer.
+* `has no data to draw` — the layer's mapping resolves to nothing. The usual
+  causes are a missing `x`/`y` mapping, or `inherit = FALSE` without restating
+  them.
+* `has length N, but M row(s) were mapped` — a constant or mapping does not
+  match the number of rows. The rule is length 1 or one value per row; there is
+  no silent recycling.
+* `has no finite coordinates to draw` — every row is `NA` or infinite after
+  filtering. Dropping invalid rows is a rule, not an accident, so a layer with
+  nothing left says so.
+* `fill is not an aesthetic of this layer` — use `col`. `fill` only exists where
+  the drawing primitive has an interior separate from its border.
+* `does not carry the facet variable ... drawn in every panel` — a warning, not
+  an error: give the layer data the facet column (or the same row count) if it
+  should be split.
+* `does not combine two complete plots` — `+` is not a layout operator; use
+  `aplot::plot_list()`.
+* a custom drawing is clipped — its coordinates are outside the canvas. Declare
+  them with `limits = list(x = ..., y = ...)`.
+
+## Reference
+
+### Layers
+
+| Layer | Requires | Notes |
+| --- | --- | --- |
+| `bb_point()` | `x`, `y` | `position = "jitter"` with a reproducible `seed` |
+| `bb_line()` | `x`, `y` | connects rows in data order |
+| `bb_text()` | `x`, `y`, optional `label` | a constant `label` wins over a mapping |
+| `bb_segment()` | `x`, `y`, `xend`, `yend` | `x1`/`y1` accepted as aliases |
+| `bb_errorbar()` | `x` + `ymin`/`ymax`, or `y` + `xmin`/`xmax` | `orientation`, `width` |
+| `bb_bar()` | `x` (`stat = "count"`) or `x`, `y` | vertical bars only |
+| `bb_boxplot()` | `x`, `y` | groups by `x` |
+| `bb_hist()` | numeric `x`, or discrete `x` with numeric `y` | For discrete `x`, draws comparable `y` histograms within each group; mapped colours are group-based |
+| `bb_density()` | numeric `x`, or discrete `x` with numeric `y` | Grouped by discrete `x` or by `col`/`fill`/`group` |
+| `bb_tile()` | `x`, `y`, `col` (or `fill`) | heatmap tiles |
+| `bb_lm()` | `x`, `y`, optional `group` | `se`, `level` |
+| `bb_signif()` | `comparisons`, or `xmin`/`xmax`/`y_position` | extends the y range |
+| `bb_layer()` | a drawing function | your own layer; `limits` declares extra range |
+| `bb_grid()` | — | `bg = TRUE` draws behind the data |
+
+Each layer maps a defined set of aesthetics. Aesthetics outside this table can
+still be passed as constants (they go straight to the base function) but are not
+trained by a scale:
+
+| Layer | Mapped aesthetics |
+| --- | --- |
+| `bb_point()` | `col`, `pch`, `cex` |
+| `bb_line()` | `col` |
+| `bb_text()` | `col`, `label` |
+| `bb_segment()` | `col` |
+| `bb_errorbar()` | `col` |
+| `bb_bar()` | `col` |
+| `bb_boxplot()` | `col` |
+| `bb_hist()` | `col` |
+| `bb_density()` | `col`, `fill` |
+| `bb_tile()` | `col`, `fill` |
+| `bb_lm()` | `col` |
+| `bb_signif()` | none (constant `col` only) |
+| `bb_layer()` | whatever the drawing function accepts (`col`, `fill`, `pch`, `lty`, `cex`, `label` are resolved) |
+
+Components: `bb_facet_wrap()`, `bb_legend()`, `bb_labs()` (and `bb_title()`,
+`bb_sub()`, `bb_xlab()`, `bb_ylab()`), `bb_theme()` with the presets
+`bb_theme_expand()`, `bb_theme_grey()`, `bb_theme_deepblue()`,
+`bb_theme_bw()`, `bb_theme_minimal()`, and the scales `bb_scale_col_palette()`,
+`bb_scale_col_manual()`, `bb_scale_col_gradient()`, `bb_scale_pch_manual()`,
+`bb_scale_lty_manual()`, `bb_scale_cex_manual()`, `bb_scale_cex_continuous()`.
+
+### Known limits
+
+* Colour scales are written for `col`. `fill` mappings reuse the `col` scale
+  path where a layer supports it; a dedicated `fill` scale is planned.
+* Mapped `lty` is read by the legend but not yet applied by the line-based
+  layers; pass `lty` as a constant to style a whole layer. Unifying it belongs
+  to the 0.3.0 scale work.
+* A custom layer contributes the ranges of its mapped `x`/`y` values and its
+  `data` follows the facets. Coordinates it computes itself do not widen the
+  axes unless declared with `limits`, and it does not extend the scales or the
+  legend.
+* `+` combines components of one plot; for several plots use
+  `aplot::plot_list()`.
+* Planned for later releases and therefore **not** part of this grammar:
+  `bb_ribbon()`, `bb_hline()`, `bb_vline()`, `bb_violin()`, `bb_smooth()`,
+  `bb_facet_grid()`, `bb_build()`, `bb_save()`.

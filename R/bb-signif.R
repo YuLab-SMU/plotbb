@@ -10,16 +10,15 @@
 ##' @importFrom graphics text
 ##' @export
 ##' @author Guangchuang Yu
-bb_signif <- function(mapping = NULL, data = NULL, ...) {
-    build_layer(mapping, data, ..., layer = ly_signif)
+bb_signif <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
+    build_layer(mapping, data, inherit = inherit, ..., layer = ly_signif)
 }
 
-ly_signif <- function(plot, mapping = NULL, data = NULL, ...) {
+ly_signif <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
-    mapping <- bb_mapping(plot, mapping)
-    
     params <- list(...)
-    
+    mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+
     tip_length <- params$tip_length %||% 0.03
     params$tip_length <- NULL
     text_gap <- params$text_gap %||% 0.01

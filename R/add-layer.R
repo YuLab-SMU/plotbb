@@ -2,6 +2,11 @@
 ##' @export
 `+.bbplot` <- function(e1, e2) {
     if (is.null(e2)) return(e1)
+    if (inherits(e2, "bbplot")) {
+        bb_abort("`+` adds components to one plot; it does not combine two ",
+                 "complete plots. Use `aplot::plot_list()` to arrange ",
+                 "several `bbplot` objects.")
+    }
     e1$adds[[length(e1$adds) + 1]] <- e2
     bbplot_add(e2, e1)
 }
@@ -31,9 +36,11 @@ add_layer <- function(plot, layer, layer_name = "customized layer") {
     return(plot)
 }
 
-build_layer <- function(mapping, data, ..., layer) {
+build_layer <- function(mapping, data, ..., inherit = TRUE, limits = NULL, layer) {
     structure(list(mapping = mapping,
                    data = data,
+                   inherit = isTRUE(inherit),
+                   limits = limits,
                    params = list(...),
                    layer = layer
                    ),
@@ -87,6 +94,10 @@ bbplot_add.formula <- function(object, plot) {
 ##' @method bbplot_add expression
 ##' @export
 bbplot_add.expression <- bbplot_add.formula
+
+##' @method bbplot_add call
+##' @export
+bbplot_add.call <- bbplot_add.formula
 
 ##' @method bbplot_add function
 ##' @export

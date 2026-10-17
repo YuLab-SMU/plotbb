@@ -2,22 +2,24 @@
 ##' @param se display confidence interval around smooth? (TRUE by default, see ggplot2)
 ##' @param level level of confidence interval to use (0.95 by default)
 ##' @export
-bb_lm <- function(mapping = NULL, data = NULL, se = TRUE, level = 0.95, ...) {
-    build_layer(mapping, data, se = se, level = level, ...,  layer = ly_lm)
+bb_lm <- function(mapping = NULL, data = NULL, se = TRUE, level = 0.95,
+                  inherit = TRUE, ...) {
+    build_layer(mapping, data, inherit = inherit, se = se, level = level,
+                ...,  layer = ly_lm)
 }
 
 ##' @importFrom graphics segments polygon
 ##' @importFrom graphics par
-ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
+ly_lm <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
-    mapping <- bb_mapping(plot, mapping)
+    params <- list(...)
+    mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
 
     layer_name <- "linear regression layer"
     if (is.null(mapping$x) || is.null(mapping$y)) {
         bb_abort("`bb_lm()` requires both `x` and `y` mappings.")
     }
     formula <- stats::as.formula(paste(yvar(mapping), '~', xvar(mapping)))
-    params <- list(...)
     se <- params$se %||% TRUE
     level <- params$level %||% 0.95
 

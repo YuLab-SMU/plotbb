@@ -33,18 +33,65 @@ bb_data <- function(p, data) {
 ## The result is a plain named list of quosures. It must not stay a
 ## "quosures" object: rlang refuses to `c()` quosure lists with anything else,
 ## and layers are evaluated with `rlang::exec()`.
-bb_mapping <- function(p, mapping) {
-    out <- bb_as_mapping_list(p$mapping)
-    if (!is.null(mapping)) {
-        out <- modifyList(out, bb_as_mapping_list(mapping))
-    }
-    out
+bb_mapping <- function(p, mapping, inherit = TRUE) {
+    bb_merge_mapping(p$mapping, mapping, inherit = inherit)
 }
 
 bb_as_mapping_list <- function(mapping) {
     if (is.null(mapping)) return(list())
     if (!is.list(mapping)) return(list())
     structure(as.list(mapping), class = NULL)
+}
+
+## Merge global and layer mappings.
+##
+## A layer inherits the plot mapping and overrides it aesthetic by aesthetic:
+## `bb_point(bb_aes(col = factor(am)))` keeps the global `x`/`y` and replaces
+## `col`. With `inherit = FALSE` the layer uses only its own mapping, so a
+## mapping that is not repeated locally becomes unavailable rather than falling
+## back to the global one.
+bb_merge_mapping <- function(global, local = NULL, inherit = TRUE) {
+    local <- bb_as_mapping_list(local)
+    if (!isTRUE(inherit)) return(local)
+    out <- bb_as_mapping_list(global)
+    if (!length(local)) return(out)
+    for (aesthetic in names(local)) {
+        out[[aesthetic]] <- local[[aesthetic]]
+    }
+    out
+}
+
+## The effective mapping of a layer object, honouring `inherit` and constants.
+##
+## This is the same rule the drawing code follows, so a layer's ranges and the
+## grouping of a summary layer agree with what is actually drawn.
+bb_layer_mapping <- function(plot, layer_obj) {
+    if (!inherits(layer_obj, "bb_layer")) return(bb_mapping(plot, NULL))
+    inherit <- layer_obj$inherit
+    if (is.null(inherit)) inherit <- TRUE
+    bb_layer_aesthetics(plot, layer_obj$mapping, inherit,
+                        layer_obj$params %||% list())
+}
+
+## The aesthetics a layer draws as constants.
+##
+## A constant is not a mapping and never goes through a scale, so it must also
+## remove the inherited mapping for that aesthetic. Enforcing this in one place
+## means every layer — built-in or added later — gets the same rule: a constant
+## wins, and neither a scale nor the grouping of a summary layer can revive the
+## mapping it overrides.
+bb_constant_aesthetics <- function(params, extra = character()) {
+    intersect(names(params), c("col", "fill", "pch", "lty", "cex", extra))
+}
+
+## The mapping a layer actually draws from: the merged mapping minus every
+## aesthetic that is given as a constant. `inherit` only affects the merge.
+bb_layer_aesthetics <- function(plot, mapping, inherit, params,
+                                extra = character()) {
+    mapping <- bb_merge_mapping(plot$mapping, mapping, inherit)
+    overridden <- bb_constant_aesthetics(params, extra)
+    if (length(overridden)) mapping[overridden] <- NULL
+    mapping
 }
 
 xvar <- function(mapping) {
@@ -106,6 +153,33 @@ bb_call_canvas <- function(canvas, xlim = NULL, ylim = NULL) {
     do.call(canvas, args)
 }
 
+## Histograms and densities need a numeric variable to summarise. When `x` is
+## discrete (a factor, or a character column of groups), the distribution of
+## the numeric `y` variable is computed per group instead of failing, so that
+## `bbplot(d, bb_aes(factor(cyl), mpg)) + bb_hist()` works like the grouped
+## boxplot does.
+bb_stat_values <- function(x, y = NULL) {
+    if (is.numeric(x)) return(list(x = x, group = NULL))
+    if (is.null(y) || !is.numeric(y) || length(y) != length(x)) {
+        bb_abort("a histogram or density needs a numeric variable: map a numeric ",
+                 "`x`, or a discrete `x` with a numeric `y`.")
+    }
+    list(x = y, group = x)
+}
+
+## The grouping variable of a statistical layer.
+##
+## One rule for `bb_hist()` and `bb_density()` (and the same precedence other
+## grouped layers use): a discrete `x` groups the numeric variable, otherwise an
+## explicit `group` mapping wins, then `col`, then `fill`. A constant aesthetic
+## is not a mapping and never groups.
+bb_stat_group <- function(values, mapping, data) {
+    values$group %||%
+        eval_mapping(mapping, "group", data) %||%
+        eval_mapping(mapping, "col", data) %||%
+        eval_mapping(mapping, "fill", data)
+}
+
 bb_discrete_levels <- function(x) {
     if (is.null(x)) return(character())
     if (is.factor(x)) {
@@ -164,14 +238,29 @@ bb_expand_range <- function(rng, mult = 0.04) {
 bb_layer_limits <- function(layer_obj, plot) {
     if (!inherits(layer_obj, "bb_layer")) return(NULL)
 
-    data <- bb_data(plot, layer_obj$data)
-    mapping <- bb_mapping(plot, layer_obj$mapping)
+    ## Ranges the layer declares explicitly (`bb_layer(limits = ...)`) take
+    ## part in the canvas even though they are not mapped from the data, e.g. a
+    ## reference line or an annotation drawn outside the data range.
+    declared <- layer_obj$limits
+    xlim <- bb_range_union(NULL, declared$x)
+    ylim <- bb_range_union(NULL, declared$y)
 
-    if (is.null(data) || is.null(mapping)) return(NULL)
+    ## Read the ranges accumulated so far (including declared ones), so an early
+    ## exit never discards a `limits` declaration.
+    current <- function() {
+        if (is.null(xlim) && is.null(ylim)) return(NULL)
+        list(xlim = xlim, ylim = ylim)
+    }
+
+    data <- bb_data(plot, layer_obj$data)
+    mapping <- bb_layer_mapping(plot, layer_obj)
+
+    if (is.null(data) || !length(mapping)) {
+        if (is.null(xlim) && is.null(ylim)) return(NULL)
+        return(list(xlim = xlim, ylim = ylim))
+    }
 
     ly <- layer_obj$layer
-    xlim <- NULL
-    ylim <- NULL
 
     if (identical(ly, ly_segment)) {
         x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
@@ -216,7 +305,7 @@ bb_layer_limits <- function(layer_obj, plot) {
         level <- layer_obj$params$level %||% 0.95
         if (is.null(grp)) {
             d2 <- lm_data(formula, data, se = se, level = level)
-            if (is.null(d2)) return(NULL)
+            if (is.null(d2)) return(current())
             xlim <- bb_range_union(xlim, c(d2$x0, d2$x1))
             ylim <- bb_range_union(ylim, c(d2$y0, d2$y1))
             if (se && !is.null(d2$ci)) {
@@ -227,7 +316,7 @@ bb_layer_limits <- function(layer_obj, plot) {
 
         grp_chr <- as.character(grp)
         keep <- !is.na(grp_chr)
-        if (!any(keep)) return(NULL)
+        if (!any(keep)) return(current())
         for (g in unique(grp_chr[keep])) {
             d <- data[grp_chr == g, , drop = FALSE]
             d2 <- lm_data(formula, d, se = se, level = level)
@@ -249,7 +338,7 @@ bb_layer_limits <- function(layer_obj, plot) {
         if (identical(stat, "count")) {
             x_chr_all <- as.character(x_raw)
             x_chr <- x_chr_all[!is.na(x_chr_all)]
-            if (length(x_chr) == 0) return(NULL)
+            if (length(x_chr) == 0) return(current())
 
             lev <- bb_discrete_levels(x_raw)
             tab <- table(factor(x_chr, levels = lev))
@@ -278,9 +367,7 @@ bb_layer_limits <- function(layer_obj, plot) {
         x <- bb_eval_or_fallback(mapping, data, "x", NULL)
         y <- bb_eval_or_fallback(mapping, data, "y", NULL)
         width <- layer_obj$params$boxwex %||% 0.8
-        
-        xlim <- NULL
-        ylim <- NULL
+
         if (!is.null(x)) {
             if (is.factor(x) || is.character(x)) {
                 xi <- as.integer(as.factor(x))
@@ -299,19 +386,39 @@ bb_layer_limits <- function(layer_obj, plot) {
 
     if (identical(ly, ly_hist)) {
         x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
-        if (is.null(x) || !is.numeric(x)) return(NULL)
-        x <- x[is.finite(x)]
-        if (length(x) < 2) return(NULL)
-        h <- graphics::hist(x, plot = FALSE)
-        xlim <- bb_range_union(xlim, h$breaks)
-        ylim <- bb_range_union(ylim, c(0, h$counts)) # Assuming counts for now
+        y <- eval_mapping(mapping, "y", data)
+        if (is.null(x)) return(current())
+        values <- bb_stat_values(x, y)
+        keep <- is.finite(values$x)
+        x <- values$x[keep]
+        if (length(x) < 2) return(current())
+
+        ## Grouped histograms share one break grid, so the panel has to cover the
+        ## tallest single group rather than the pooled counts.
+        grp <- bb_stat_group(values, mapping, data)
+        group <- if (is.null(grp)) rep("all", length(x)) else
+            as.character(rep(grp, length.out = length(values$x))[keep])
+        breaks <- layer_obj$params$breaks %||% "Sturges"
+        all_breaks <- graphics::hist(x, breaks = breaks, plot = FALSE)$breaks
+        for (g in unique(group[!is.na(group)])) {
+            sub_x <- x[group == g]
+            if (length(sub_x) < 2) next
+            h <- graphics::hist(sub_x, breaks = all_breaks, plot = FALSE)
+            xlim <- bb_range_union(xlim, h$breaks)
+            ylim <- bb_range_union(ylim, c(0, h$counts))
+        }
         return(list(xlim = xlim, ylim = ylim))
     }
 
     if (identical(ly, ly_density)) {
         x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
+        y <- eval_mapping(mapping, "y", data)
+        if (!is.null(x)) {
+            values <- bb_stat_values(x, y)
+            x <- values$x
+        }
         if (!is.null(x) && is.numeric(x)) {
-            grp <- eval_mapping(mapping, "col", data) %||% eval_mapping(mapping, "group", data) %||% eval_mapping(mapping, "fill", data)
+            grp <- bb_stat_group(values, mapping, data)
             if (is.null(grp)) {
                 d <- stats::density(x, na.rm = TRUE)
                 xlim <- bb_range_union(xlim, d$x)
@@ -342,11 +449,11 @@ bb_layer_limits <- function(layer_obj, plot) {
         if (!is.null(comparisons)) {
             x_raw <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
             y_raw <- bb_eval_or_fallback(mapping, data, "y", yvar(mapping))
-            if (is.null(x_raw) || is.null(y_raw)) return(NULL)
+            if (is.null(x_raw) || is.null(y_raw)) return(current())
 
             if (!is.list(comparisons)) comparisons <- list(comparisons)
             ncomp <- length(comparisons)
-            if (ncomp == 0) return(NULL)
+            if (ncomp == 0) return(current())
 
             y_span <- diff(range(y_raw, na.rm = TRUE))
             if (!is.finite(y_span) || y_span == 0) y_span <- 1
@@ -379,7 +486,7 @@ bb_layer_limits <- function(layer_obj, plot) {
                 xmin <- c(xmin, min(p1, p2))
                 xmax <- c(xmax, max(p1, p2))
             }
-            if (!length(xmin)) return(NULL)
+            if (!length(xmin)) return(current())
 
             xlim <- bb_range_union(xlim, xmin)
             xlim <- bb_range_union(xlim, xmax)
@@ -391,7 +498,7 @@ bb_layer_limits <- function(layer_obj, plot) {
         xmin <- bb_eval_or_fallback(mapping, data, "xmin", NULL)
         xmax <- bb_eval_or_fallback(mapping, data, "xmax", NULL)
         y <- bb_eval_or_fallback(mapping, data, "y_position", NULL) %||% bb_eval_or_fallback(mapping, data, "y", NULL)
-        if (is.null(xmin) || is.null(xmax) || is.null(y)) return(NULL)
+        if (is.null(xmin) || is.null(xmax) || is.null(y)) return(current())
 
         xlim <- bb_range_union(xlim, xmin)
         xlim <- bb_range_union(xlim, xmax)
@@ -422,6 +529,20 @@ bb_plot_limits <- function(plot) {
         xy <- bb_eval_xy(plot$mapping, plot$data)
         xlim <- bb_range_union(xlim, xy$x)
         ylim <- bb_range_union(ylim, xy$y)
+    }
+
+    ## A layer with its own data is a first-class input: its coordinates take
+    ## part in the ranges, so `bb_point(data = d)` is not drawn outside a
+    ## canvas built from the plot data alone.
+    if (length(plot$adds)) {
+        for (obj in plot$adds) {
+            if (!inherits(obj, "bb_layer") || !is.data.frame(obj$data)) next
+            mapping <- bb_layer_mapping(plot, obj)
+            if (!length(mapping)) next
+            xy <- bb_eval_xy(mapping, obj$data)
+            xlim <- bb_range_union(xlim, xy$x)
+            ylim <- bb_range_union(ylim, xy$y)
+        }
     }
 
     if (length(plot$adds)) {

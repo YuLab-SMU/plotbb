@@ -2,15 +2,16 @@
 ##' @param stat one of 'identity' or 'count'
 ##' @param width bar width or errorbar cap width
 ##' @export
-bb_bar <- function(mapping = NULL, data = NULL, stat = "identity", width = 0.9, ...) {
-    build_layer(mapping, data, ..., layer = ly_bar, stat = stat, width = width)
+bb_bar <- function(mapping = NULL, data = NULL, stat = "identity", width = 0.9, inherit = TRUE, ...) {
+    build_layer(mapping, data, inherit = inherit, ..., layer = ly_bar, stat = stat, width = width)
 }
 
-ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width = 0.9, ...) {
+ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width = 0.9, inherit = TRUE, ...) {
     stat <- match.arg(stat, c("identity", "count"))
 
     data <- bb_layer_data(plot, data, mapping)
-    mapping <- bb_mapping(plot, mapping)
+    params <- list(...)
+    mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
     if (is.null(data)) stop("bb_bar requires data")
 
     x_raw <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
@@ -18,7 +19,6 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
         bb_abort("`bb_bar()` requires an `x` mapping.")
     }
 
-    params <- list(...)
 
     if (stat == "count") {
         x_chr_all <- as.character(x_raw)

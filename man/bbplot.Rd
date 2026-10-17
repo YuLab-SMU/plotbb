@@ -22,6 +22,18 @@ a proof of concept for grammar of graphics based on base plot.
 The bbplot class contains data (input data), mapping (aesthetic mapping),
 layer (a list of plot layers), theme (theme setting) and
 labs (label setting, including title, subtitle, x and y labels).
+
+
+`+` adds components (layers, themes, labels, scales, legends, facets) to a
+single plot and draws them in the order they were added. It does not
+combine two complete plots: arrange several plots with
+\code{aplot::plot_list()} instead.
+
+Every layer inherits the plot \code{data} and \code{mapping} and may
+override them: a local mapping overrides the global mapping aesthetic by
+aesthetic, and \code{inherit = FALSE} opts out of the global mapping
+entirely. Aesthetic constants such as \code{bb_point(col = "tomato")} apply
+to the whole layer and win over a mapped aesthetic.
 }
 \examples{
 library(plotbb)

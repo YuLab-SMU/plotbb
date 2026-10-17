@@ -1,12 +1,13 @@
 ##' @rdname layer
 ##' @export
-bb_segment <- function(mapping = NULL, data = NULL, ...) {
-    build_layer(mapping, data, ..., layer = ly_segment)
+bb_segment <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
+    build_layer(mapping, data, inherit = inherit, ..., layer = ly_segment)
 }
 
-ly_segment <- function(plot, mapping = NULL, data = NULL, ...) {
+ly_segment <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
-    mapping <- bb_mapping(plot, mapping)
+    params <- list(...)
+    mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
 
     xy <- bb_eval_xy(mapping, data)
     x <- xy$x
@@ -20,7 +21,6 @@ ly_segment <- function(plot, mapping = NULL, data = NULL, ...) {
         bb_abort("`bb_segment()` requires `xend` and `yend` mappings.")
     }
 
-    params <- list(...)
     n <- max(length(x) %||% 0L, length(y) %||% 0L)
     if (n == 0L) {
         bb_abort("`bb_segment` has no data to draw.")
@@ -43,6 +43,7 @@ ly_segment <- function(plot, mapping = NULL, data = NULL, ...) {
     }
     x <- rep(x, length.out = n)
     y <- rep(y, length.out = n)
+    params <- bb_layer_constants(params, ok, n)
     params <- modifyList(params, list(x0 = x[ok], y0 = y[ok],
                                       x1 = rep(xend, length.out = n)[ok],
                                       y1 = rep(yend, length.out = n)[ok]))

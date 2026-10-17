@@ -17,29 +17,57 @@
 \alias{bb_tile}
 \title{bb_boxplot}
 \usage{
-bb_bar(mapping = NULL, data = NULL, stat = "identity", width = 0.9, ...)
+bb_bar(
+  mapping = NULL,
+  data = NULL,
+  stat = "identity",
+  width = 0.9,
+  inherit = TRUE,
+  ...
+)
 
-bb_boxplot(mapping = NULL, data = NULL, ...)
+bb_boxplot(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
-bb_density(mapping = NULL, data = NULL, ...)
+bb_density(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
-bb_errorbar(mapping = NULL, data = NULL, orientation = "y", width = 0.5, ...)
+bb_errorbar(
+  mapping = NULL,
+  data = NULL,
+  orientation = "y",
+  width = 0.5,
+  inherit = TRUE,
+  ...
+)
 
-bb_hist(mapping = NULL, data = NULL, ...)
+bb_hist(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
-bb_line(mapping = NULL, data = NULL, ...)
+bb_line(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
-bb_lm(mapping = NULL, data = NULL, se = TRUE, level = 0.95, ...)
+bb_lm(
+  mapping = NULL,
+  data = NULL,
+  se = TRUE,
+  level = 0.95,
+  inherit = TRUE,
+  ...
+)
 
-bb_point(mapping = NULL, data = NULL, position = "identity", ..., seed = 1)
+bb_point(
+  mapping = NULL,
+  data = NULL,
+  position = "identity",
+  inherit = TRUE,
+  ...,
+  seed = 1
+)
 
-bb_segment(mapping = NULL, data = NULL, ...)
+bb_segment(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
-bb_signif(mapping = NULL, data = NULL, ...)
+bb_signif(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
-bb_text(mapping = NULL, data = NULL, ...)
+bb_text(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
-bb_tile(mapping = NULL, data = NULL, ...)
+bb_tile(mapping = NULL, data = NULL, inherit = TRUE, ...)
 }
 \arguments{
 \item{mapping}{aesthetic mapping}
@@ -49,6 +77,12 @@ bb_tile(mapping = NULL, data = NULL, ...)
 \item{stat}{one of 'identity' or 'count'}
 
 \item{width}{bar width or errorbar cap width}
+
+\item{inherit}{whether the layer inherits the plot mapping. With
+\code{inherit = FALSE} the layer uses only its own \code{mapping}, so a
+mapping that is not repeated locally is unavailable; the layer's
+\code{data} is still inherited from \code{bbplot()} unless given
+explicitly.}
 
 \item{...}{addition parameter for the layer}
 

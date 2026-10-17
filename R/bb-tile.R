@@ -1,25 +1,26 @@
 ##' @rdname layer
 ##' @export
-bb_tile <- function(mapping = NULL, data = NULL, ...) {
-    build_layer(mapping, data, ...,  layer = ly_tile)
+bb_tile <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
+    build_layer(mapping, data, inherit = inherit, ...,  layer = ly_tile)
 }
 
 
-ly_tile <- function(plot, mapping = NULL, data = NULL, ...) {
+ly_tile <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
-    mapping <- bb_mapping(plot, mapping)
+    params <- list(...)
+    mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
 
     xy <- if (is.null(data)) list(x = NULL, y = NULL) else bb_eval_xy(mapping, data)
     if (is.null(xy$x) && !is.null(data) && !is.null(xvar(mapping))) xy$x <- data[[xvar(mapping)]]
     if (is.null(xy$y) && !is.null(data) && !is.null(yvar(mapping))) xy$y <- data[[yvar(mapping)]]
     x <- xy$x
     y <- xy$y
-    params <- list(...)
     prepared <- bb_prepare_aes(x, y, mapping, data, "bb_tile", params)
     x <- prepared$x
     y <- prepared$y
     ok <- prepared$keep
     n <- prepared$n
+    params <- bb_layer_constants(params, ok, n)
 
     ly <- function() {
         col <- params$fill %||% params$col
