@@ -51,6 +51,7 @@ export(bb_scale_lty_manual)
 export(bb_scale_pch_manual)
 export(bb_segment)
 export(bb_signif)
+export(bb_smooth)
 export(bb_sub)
 export(bb_text)
 export(bb_theme)
@@ -61,6 +62,7 @@ export(bb_theme_grey)
 export(bb_theme_minimal)
 export(bb_tile)
 export(bb_title)
+export(bb_violin)
 export(bb_vline)
 export(bb_xlab)
 export(bb_ylab)
@@ -74,6 +76,7 @@ importFrom(graphics,
   boxplot,
   grid,
   hist,
+  lines,
   par,
   plot,
   points,

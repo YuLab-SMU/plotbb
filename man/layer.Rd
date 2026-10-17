@@ -2,7 +2,7 @@
 % Please edit documentation in R/bb-bar.R, R/bb-boxplot.R, R/bb-density.R,
 %   R/bb-errorbar.R, R/bb-hist.R, R/bb-line.R, R/bb-lm.R, R/bb-point.R,
 %   R/bb-reference.R, R/bb-ribbon.R, R/bb-segment.R, R/bb-signif.R,
-%   R/bb-text.R, R/bb-tile.R
+%   R/bb-smooth.R, R/bb-text.R, R/bb-tile.R, R/bb-violin.R
 \name{bb_bar}
 \alias{bb_bar}
 \alias{bb_boxplot}
@@ -17,8 +17,10 @@
 \alias{bb_ribbon}
 \alias{bb_segment}
 \alias{bb_signif}
+\alias{bb_smooth}
 \alias{bb_text}
 \alias{bb_tile}
+\alias{bb_violin}
 \title{bb_boxplot}
 \usage{
 bb_bar(
@@ -89,9 +91,13 @@ bb_segment(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
 bb_signif(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
+bb_smooth(mapping = NULL, data = NULL, inherit = TRUE, ...)
+
 bb_text(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
 bb_tile(mapping = NULL, data = NULL, inherit = TRUE, ...)
+
+bb_violin(mapping = NULL, data = NULL, inherit = TRUE, ...)
 }
 \arguments{
 \item{mapping}{aesthetic mapping}
@@ -108,7 +114,8 @@ mapping that is not repeated locally is unavailable; the layer's
 \code{data} is still inherited from \code{bbplot()} unless given
 explicitly.}
 
-\item{...}{addition parameter for the layer}
+\item{...}{additional parameters: `width` (default 0.9), `adjust` (1),
+`bw`, `kernel`, `trim`, `n`, `alpha`, `border`, `fill`/`col`.}
 
 \item{orientation}{one of 'y' or 'x'}
 
@@ -143,6 +150,10 @@ A modified bbplot object
 A modified bbplot object
 
 A modified bbplot object
+
+A modified bbplot object
+
+A modified bbplot object
 }
 \description{
 boxplot layer
@@ -158,6 +169,10 @@ reference lines
 ribbon layer
 
 significance layer
+
+smooth layer
+
+violin layer
 }
 \details{
 bbplot layers
@@ -199,6 +214,31 @@ may be given in either order: the band is drawn between them. `alpha`
 When the layer brings its own data, inherited mappings are still evaluated
 on that data: give the layer the variables it inherits, or set
 `inherit = FALSE` when the plot has aesthetics the band does not carry.
+
+`bb_smooth()` fits an explicit model per group and draws the fitted curve,
+optionally with a confidence band. The fit method is never implicit: choose
+`"lm"` or `"loess"` (the default), pass extra fitting arguments through
+`method.args`, and control the band with `se` and `level`.
+
+`x` and `y` are mapped from the layer's data, `group` splits the fit, and a
+mapped `col` colours each curve. The confidence band uses `fill` (or the
+curve colour at low alpha). Small samples that cannot support the requested
+fit are reported with a warning and fall back to a linear fit; a group with
+fewer than two points is skipped. Fits are computed when the layer is added,
+so repeated draws do not re-fit.
+
+`bb_violin()` draws one density polygon per group: `x` selects the group
+(a factor, character or numeric position), `y` is the numeric variable whose
+distribution is estimated with `stats::density()`. The density is scaled to
+`width` in x units, so groups stay comparable; `adjust` and `bw` control the
+bandwidth, `kernel`, `trim` and `n` are passed to `density()`.
+
+The layer follows the grammar contract: it inherits data and mapping, accepts
+its own, draws in `+` order, honours constant or mapped `fill`/`col`, and
+contributes the group positions and the numeric values to the ranges. Only
+vertical violins are drawn. A group needs at least two finite values and a
+non-zero spread; other groups are skipped with a warning. Rows with a
+non-finite `y` are dropped.
 }
 \examples{
 library(plotbb)

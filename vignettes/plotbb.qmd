@@ -571,7 +571,8 @@ The statistical layers take the same data and mapping arguments as the
 geometric ones and contribute their own ranges. "Statistical" here means that
 the layer computes something from the rows before drawing: a histogram bins a
 numeric variable, a density estimates its distribution, a boxplot summarises it
-by group, a fitted line estimates a trend, and `bb_signif()` draws comparisons.
+by group, a fitted line estimates a trend, a violin estimates a distribution per group,
+a smoother fits an explicit model, and `bb_signif()` draws comparisons.
 There is no separate statistic API to learn — the summary is part of the layer,
 and its result is what takes part in the ranges.
 
@@ -608,6 +609,45 @@ bbplot(mtcars, bb_aes(factor(cyl), mpg)) +
 comparisons; it draws brackets above the data and extends the `y` range so they
 are not clipped. Its aesthetics are constants (`col`, `cex`, `lty`, ...) rather
 than mappings, because there is no per-row value to map.
+
+`bb_violin()` estimates one density per group with `stats::density()` and scales
+it to `width` in x units, so groups with different sample sizes stay comparable.
+`adjust` and `bw` control the bandwidth; `kernel`, `trim` and `n` are passed
+through. The layer is vertical, a group needs at least two finite values with a
+non-zero spread, and a constant group is skipped with a warning rather than
+silently drawn as a flat line. With a numeric `x`, the group positions are the
+numeric values; with a factor or character `x`, groups sit at 1, 2, 3, ... and
+the axis shows those numeric positions.
+
+```{r plotbb-violin}
+set.seed(7)
+violin_data <- data.frame(
+  group = factor(rep(c("a", "b", "c"), c(30, 25, 20))),
+  value = c(rnorm(30), rnorm(25, 2), rnorm(20, 4))
+)
+bbplot(violin_data, bb_aes(group, value)) +
+  bb_violin(fill = "steelblue", alpha = 0.5)
+```
+
+`bb_smooth()` makes the fit explicit: `method` is `"loess"` or `"lm"`,
+`formula` defaults to `y ~ x`, `method.args` carries span or other fitting
+arguments, and `se`/`level` control the confidence band. Fits happen when the
+layer is added, so redrawing does not re-fit; a group with too few points or
+distinct x values falls back to a linear fit with a warning. The band uses
+`fill` (or the curve colour at low alpha), and the curve uses `col`/`lty`/`lwd`.
+
+```{r plotbb-smooth}
+set.seed(8)
+smooth_data <- data.frame(
+  x = 1:60,
+  y = sin((1:60) / 8) + rnorm(60, sd = 0.3),
+  g = rep(c("a", "b"), each = 30)
+)
+bbplot(smooth_data, bb_aes(x = x, y = y, col = g)) +
+  bb_point(pch = 19, cex = 0.6) +
+  bb_smooth(method = "loess", se = TRUE, level = 0.95) +
+  bb_legend(title = "group")
+```
 
 Fitted lines, intervals and errors follow the same pattern: the layer computes
 the summary and contributes both the summary and its uncertainty to the range.
@@ -1054,6 +1094,8 @@ The error messages are written to point back at a rule. A short map:
 | `bb_density()` | numeric `x`, or discrete `x` with numeric `y` | Grouped by discrete `x` or by `col`/`fill`/`group` |
 | `bb_tile()` | `x`, `y`, `col` (or `fill`) | heatmap tiles |
 | `bb_ribbon()` | `x`, `ymin`, `ymax` | sorted by `x`; `alpha`, `border`; one band per group |
+| `bb_violin()` | `x` (group), numeric `y` | density per group; `width`, `adjust`, `bw`, `trim` |
+| `bb_smooth()` | `x`, `y`, optional `group` | explicit `method`/`formula`; `se`, `level` |
 | `bb_hline()` | `yintercept` or a `yintercept` mapping | no range change unless `expand_limits = TRUE` |
 | `bb_vline()` | `xintercept` or a `xintercept` mapping | no range change unless `expand_limits = TRUE` |
 | `bb_lm()` | `x`, `y`, optional `group` | `se`, `level` |
@@ -1078,6 +1120,8 @@ trained by a scale:
 | `bb_density()` | `col`, `fill` |
 | `bb_tile()` | `col`, `fill` |
 | `bb_ribbon()` | `col`, `fill` |
+| `bb_violin()` | `col`, `fill` |
+| `bb_smooth()` | `col`, `fill` |
 | `bb_hline()` | `col`, `lty` (per line when the intercept is mapped) |
 | `bb_vline()` | `col`, `lty` (per line when the intercept is mapped) |
 | `bb_lm()` | `col`, `lty` |
@@ -1114,5 +1158,5 @@ Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
 * `+` combines components of one plot; for several plots use
   `aplot::plot_list()`.
 * Planned for later releases and therefore **not** part of this grammar:
-  `bb_violin()`, `bb_smooth()`, a per-layer legend and the colour-bar polish
-  (minor ticks, a discrete gradient legend, long-title wrapping).
+  a per-layer legend and the colour-bar polish (minor ticks, a discrete
+  gradient legend, long-title wrapping).

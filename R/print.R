@@ -139,7 +139,8 @@ bb_print_facet <- function(x) {
         base_canvas <- function(xlim = NULL, ylim = NULL) {
             xy <- bb_eval_xy(x$mapping, d)
             if (!is.null(xy$x) && !is.null(xy$y) &&
-                length(xy$x) > 0L && length(xy$y) > 0L) {
+                length(xy$x) > 0L && length(xy$y) > 0L &&
+                is.numeric(xy$x) && is.numeric(xy$y)) {
                 args <- list(xy$x, xy$y, type = "n", xlab = "", ylab = "")
                 if (!is.null(xlim)) args$xlim <- xlim
                 if (!is.null(ylim)) args$ylim <- ylim

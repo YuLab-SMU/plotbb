@@ -293,7 +293,8 @@ bb_summary_labs <- function(plot) {
 bb_plot_summarises <- function(plot) {
     any(vapply(plot$adds, function(obj) {
         inherits(obj, "bb_layer") &&
-            (identical(obj$layer, ly_hist) || identical(obj$layer, ly_density))
+            (identical(obj$layer, ly_hist) || identical(obj$layer, ly_density) ||
+                 identical(obj$layer, ly_violin))
     }, logical(1)))
 }
 
@@ -305,7 +306,7 @@ bb_layer_is_reference <- function(layer_obj) {
 bb_layer_is_summary <- function(layer_obj) {
     if (!inherits(layer_obj, "bb_layer")) return(FALSE)
     summary_layers <- list(ly_hist, ly_density, ly_bar, ly_boxplot, ly_lm,
-                           ly_signif)
+                           ly_signif, ly_violin)
     any(vapply(summary_layers, identical, logical(1), layer_obj$layer))
 }
 
@@ -482,6 +483,43 @@ bb_layer_limits <- function(layer_obj, plot) {
             xlim <- c(1 - width/2, 1 + width/2)
         }
         ylim <- bb_range_union(ylim, y)
+        return(list(xlim = xlim, ylim = ylim))
+    }
+
+    if (identical(ly, ly_smooth)) {
+        x <- bb_eval_or_fallback(mapping, data, "x", NULL)
+        y <- bb_eval_or_fallback(mapping, data, "y", NULL)
+        if (is.null(x) || is.null(y) || !is.numeric(x) || !is.numeric(y)) {
+            return(current())
+        }
+        ok <- is.finite(x) & is.finite(y)
+        if (!any(ok)) return(current())
+        xlim <- bb_range_union(xlim, x[ok])
+        ylim <- bb_range_union(ylim, y[ok])
+        return(list(xlim = xlim, ylim = ylim))
+    }
+
+    if (identical(ly, ly_violin)) {
+        x <- bb_eval_or_fallback(mapping, data, "x", NULL)
+        y <- bb_eval_or_fallback(mapping, data, "y", NULL)
+        if (is.null(y) || !is.numeric(y)) return(current())
+        width <- layer_obj$params$width %||% 0.9
+        n <- max(length(y), length(x) %||% 0L)
+        y <- rep(y, length.out = n)
+        ok <- is.finite(y)
+        if (is.null(x)) {
+            pos <- rep(1, n)
+        } else if (is.factor(x) || is.character(x)) {
+            pos <- match(as.character(rep(x, length.out = n)),
+                         sort(unique(as.character(x[ok]))))
+        } else {
+            pos <- as.numeric(rep(x, length.out = n))
+        }
+        ok <- ok & is.finite(pos)
+        if (!any(ok)) return(current())
+        xlim <- bb_range_union(xlim, pos[ok] - width / 2)
+        xlim <- bb_range_union(xlim, pos[ok] + width / 2)
+        ylim <- bb_range_union(ylim, y[ok])
         return(list(xlim = xlim, ylim = ylim))
     }
 

@@ -1,3 +1,41 @@
+# plotbb 0.7.0
+
+This release adds the two remaining statistical layers: violin and smooth.
+
+## bb_violin()
+
++ one density polygon per group, estimated with `stats::density()` and scaled to
+  `width` in x units; `adjust`/`bw` control the bandwidth, `kernel`, `trim` and
+  `n` are passed through
++ `x` can be a factor, character or numeric group position; `y` must be numeric;
+  the layer contributes the group positions and the values to the ranges
++ groups with fewer than two finite values or zero spread are skipped with a
+  warning; only vertical violins are drawn
++ `fill`/`col` can be constant or mapped and the layer takes part in the fill
+  scale and legend
+
+## bb_smooth()
+
++ explicit fit method (`"loess"` or `"lm"`), formula (default `y ~ x`),
+  `method.args`, `se` and `level`; the fit is computed when the layer is added,
+  so repeated draws do not re-fit
++ groups come from `group`, then a mapped `col`, then `fill`; each group gets its
+  own curve and confidence band
++ groups with too few points or distinct x values fall back to a linear fit with
+  a warning; a group with fewer than two points is skipped
++ the band uses `fill` (or the curve colour at low alpha), and the curve uses
+  `col`/`lty`/`lwd`; the band is drawn before the line and contributes to the
+  ranges
+
+## Tests and documentation
+
++ test-layers-0.7.R covers violin polygons, skipped groups, numeric positions,
+  fill legends and facets; smooth curves/bands, fallback warnings, formulas,
+  facets and parameter validation
++ the vignette statistical section documents both layers with runnable examples
++ the known-limits list now leaves only the per-layer legend and colour-bar
+  polish as planned work
+
 # plotbb 0.6.0
 
 This release finishes the facet layout and adds a row/column facet grid.

@@ -68,7 +68,8 @@ bbplot_add.bb_facet_grid <- function(object, plot) {
 bb_facet_base_canvas <- function(plot, data, xlim, ylim) {
     xy <- bb_eval_xy(plot$mapping, data)
     if (!is.null(xy$x) && !is.null(xy$y) &&
-        length(xy$x) > 0L && length(xy$y) > 0L) {
+        length(xy$x) > 0L && length(xy$y) > 0L &&
+        is.numeric(xy$x) && is.numeric(xy$y)) {
         args <- list(xy$x, xy$y, type = "n", xlab = "", ylab = "")
         if (!is.null(xlim)) args$xlim <- xlim
         if (!is.null(ylim)) args$ylim <- ylim

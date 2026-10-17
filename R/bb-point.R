@@ -112,7 +112,7 @@ bbplot_add.bb_layer <- function(object, plot) {
 
     params_list <- object$params %||% list()
     fill_layers <- list(ly_custom, ly_density, ly_tile, ly_bar, ly_boxplot,
-                        ly_hist, ly_lm, ly_ribbon)
+                        ly_hist, ly_lm, ly_ribbon, ly_violin, ly_smooth)
     fill_ok <- any(vapply(fill_layers, identical, logical(1), ly))
     if (!is.null(params_list$fill) && !fill_ok) {
         bb_abort("`fill` is not an aesthetic of this layer: use `col` for its ",
