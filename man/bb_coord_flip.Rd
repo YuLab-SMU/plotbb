@@ -17,12 +17,12 @@ Flip the positional axes
 data transformation: axes labels, positional scales and the titles swap, and
 the supported layers are redrawn with x/y swapped.
 
-Only coordinate-symmetric layers are supported: `bb_point()`, `bb_line()`,
-`bb_text()`, `bb_segment()`, `bb_tile()`, `bb_layer()` and constant/mapped
+Supported layers are `bb_point()`, `bb_line()`, `bb_text()`,
+`bb_segment()`, `bb_tile()`, `bb_layer()`, `bb_violin()` and `bb_boxplot()`
+(the last two switch to the opposite `orientation`), plus constant or mapped
 `bb_hline()`/`bb_vline()` (which become the other reference line). Layers
-that compute an orientation (violin, boxplot, bar, density, histogram,
-ribbon, smooth, lm, errorbar, signif) are not flipped; they raise an error
-rather than silently drawing in the wrong orientation.
+that have no orientation model (bar, density, histogram, ribbon, smooth, lm,
+errorbar, signif) raise an error rather than drawing in the wrong orientation.
 }
 \author{
 Guangchuang Yu

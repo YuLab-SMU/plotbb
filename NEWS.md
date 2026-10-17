@@ -1,3 +1,30 @@
+# plotbb 0.10.0
+
+Horizontal statistical layers and a wider coord flip.
+
+## Orientation
+
++ `bb_violin(orientation = "horizontal")` puts the numeric values on x and the
+  groups on y (map `x` to values and `y` to groups); the ranges, density support
+  and `trim = FALSE` behaviour follow the orientation
++ `bb_boxplot(orientation = "horizontal")` follows the same mapping convention
++ `bb_coord_flip()` now flips violin and boxplot by swapping the mapping and
+  toggling their orientation, in addition to point, line, text, segment, tile,
+  custom layers and hline/vline
+
+## Outside legend stacking
+
++ multiple outside legends are stacked using the height `graphics::legend()`
+  reports, so automatic legends no longer clip each other at the bottom
++ `bb_coord_flip()`'s error lists the layers that need an orientation model;
+  `bb_bar()` remains vertical-only
+
+## Tests and documentation
+
++ test-orientation-0.9.R covers horizontal violin/boxplot and validation;
+  test-coord-0.9.R now checks violin/boxplot flip and an unsupported layer
++ the vignette documents the horizontal mapping and the updated coord-flip scope
+
 # plotbb 0.9.1
 
 Small fixes after the 0.9.0 release.

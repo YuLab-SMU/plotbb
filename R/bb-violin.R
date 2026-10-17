@@ -8,29 +8,41 @@
 ##'
 ##' The layer follows the grammar contract: it inherits data and mapping, accepts
 ##' its own, draws in `+` order, honours constant or mapped `fill`/`col`, and
-##' contributes the group positions and the numeric values to the ranges. Only
-##' vertical violins are drawn. A group needs at least two finite values and a
-##' non-zero spread; other groups are skipped with a warning. Rows with a
-##' non-finite `y` are dropped.
+##' contributes the group positions and the numeric values to the ranges. With
+##' `orientation = "horizontal"`, map `x` to the numeric values and `y` to the
+##' groups; the default vertical orientation is the other way round. A group needs
+##' at least two finite values and a non-zero spread; other groups are skipped with
+##' a warning. Rows with a non-finite value are dropped.
 ##'
 ##' @title bb_violin
 ##' @rdname layer
 ##' @param mapping aesthetic mapping
 ##' @param data layer data
+##' @param orientation `"vertical"` (default; `x` groups, `y` values) or
+##'   `"horizontal"` (`x` values, `y` groups).
 ##' @param ... additional parameters: `width` (default 0.9), `adjust` (1),
 ##'   `bw`, `kernel`, `trim`, `n`, `alpha`, `border`, `fill`/`col`.
 ##' @return A modified bbplot object
 ##' @importFrom graphics polygon
 ##' @export
 ##' @author Guangchuang Yu
-bb_violin <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
-    build_layer(mapping, data, inherit = inherit, ..., layer = ly_violin)
+bb_violin <- function(mapping = NULL, data = NULL, inherit = TRUE,
+                      orientation = c("vertical", "horizontal"), ...) {
+    orientation <- match.arg(orientation)
+    build_layer(mapping, data, inherit = inherit, orientation = orientation,
+                ..., layer = ly_violin)
 }
 
 ly_violin <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
     params <- list(...)
     mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+
+    orientation <- params$orientation %||% "vertical"
+    if (!orientation %in% c("vertical", "horizontal")) {
+        bb_abort("`orientation` in `bb_violin()` must be 'vertical' or ",
+                 "'horizontal'.")
+    }
 
     width <- params$width %||% 0.9
     adjust <- params$adjust %||% 1
@@ -72,28 +84,43 @@ ly_violin <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     }
 
     ly <- function() {
-        y <- eval_mapping(mapping, "y", data)
-        if (is.null(y)) {
-            bb_abort("`bb_violin()` requires a numeric `y` mapping.")
+        if (identical(orientation, "horizontal")) {
+            value <- eval_mapping(mapping, "x", data)
+            group_var <- eval_mapping(mapping, "y", data)
+            value_name <- "x"
+            group_name <- "y"
+        } else {
+            value <- eval_mapping(mapping, "y", data)
+            group_var <- eval_mapping(mapping, "x", data)
+            value_name <- "y"
+            group_name <- "x"
         }
-        if (!is.numeric(y)) {
-            bb_abort("`bb_violin()` requires a numeric `y` mapping.")
+        if (is.null(value)) {
+            bb_abort("`bb_violin()` requires a numeric `", value_name,
+                     "` mapping.")
         }
-        x <- eval_mapping(mapping, "x", data)
-        n <- max(length(y), length(x) %||% 0L)
-        bb_check_length(y, n, "y", "bb_violin")
-        if (!is.null(x)) bb_check_length(x, n, "x", "bb_violin")
-        y <- rep(y, length.out = n)
-        x <- if (is.null(x)) NULL else rep(x, length.out = n)
+        if (!is.numeric(value)) {
+            bb_abort("`bb_violin()` requires a numeric `", value_name,
+                     "` mapping.")
+        }
+        n <- max(length(value), length(group_var) %||% 0L)
+        bb_check_length(value, n, value_name, "bb_violin")
+        if (!is.null(group_var)) {
+            bb_check_length(group_var, n, group_name, "bb_violin")
+        }
+        value <- rep(value, length.out = n)
+        group_var <- if (is.null(group_var)) NULL else
+            rep(group_var, length.out = n)
 
-        ok <- is.finite(y)
+        ok <- is.finite(value)
         if (!any(ok)) {
-            bb_warn("`bb_violin()` has no finite `y` values to draw; skipped.")
+            bb_warn("`bb_violin()` has no finite `", value_name,
+                    "` values to draw; skipped.")
             return(invisible(NULL))
         }
 
-        grp <- bb_group_values(mapping, data, x)
-        pos <- bb_violin_positions(x, grp, n)
+        grp <- bb_group_values(mapping, data, group_var)
+        pos <- bb_violin_positions(group_var, grp, n)
         groups <- pos$groups
         positions <- pos$positions
 
@@ -113,10 +140,9 @@ ly_violin <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
         fill_vec <- if (is.null(fill_vec)) NULL else
             rep(fill_vec, length.out = n)
 
-        drawn <- character()
         for (g in sort(unique(groups[ok]))) {
             idx <- ok & groups == g
-            values <- y[idx]
+            values <- value[idx]
             values <- values[is.finite(values)]
             if (length(values) < 2L || stats::sd(values) == 0) {
                 bb_warn("`bb_violin()` skipped group '", g,
@@ -142,8 +168,13 @@ ly_violin <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
             pos <- positions[idx][1]
             half <- width / 2
             scale <- half / max(d$y)
-            poly_x <- c(pos - d$y * scale, rev(pos + d$y * scale))
-            poly_y <- c(d$x, rev(d$x))
+            if (identical(orientation, "horizontal")) {
+                poly_x <- c(d$x, rev(d$x))
+                poly_y <- c(pos - d$y * scale, rev(pos + d$y * scale))
+            } else {
+                poly_x <- c(pos - d$y * scale, rev(pos + d$y * scale))
+                poly_y <- c(d$x, rev(d$x))
+            }
             fill <- if (!is.null(fill_vec)) {
                 fill_vec[idx][1]
             } else {
@@ -158,7 +189,6 @@ ly_violin <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
             do.call(graphics::polygon,
                     list(x = poly_x, y = poly_y, col = fill,
                          border = border))
-            drawn <- c(drawn, g)
         }
         invisible(NULL)
     }

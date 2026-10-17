@@ -540,23 +540,32 @@ bb_layer_limits <- function(layer_obj, plot) {
     }
 
     if (identical(ly, ly_boxplot)) {
-        x <- bb_eval_or_fallback(mapping, data, "x", NULL)
-        y <- bb_eval_or_fallback(mapping, data, "y", NULL)
-        width <- layer_obj$params$boxwex %||% 0.8
-
-        if (!is.null(x)) {
-            if (is.factor(x) || is.character(x)) {
-                xi <- as.integer(as.factor(x))
-                xlim <- bb_range_union(xlim, xi - width/2)
-                xlim <- bb_range_union(xlim, xi + width/2)
-            } else {
-                 xlim <- bb_range_union(xlim, x - width/2)
-                 xlim <- bb_range_union(xlim, x + width/2)
-            }
+        params <- layer_obj$params %||% list()
+        orientation <- params$orientation %||% "vertical"
+        width <- params$boxwex %||% 0.8
+        if (identical(orientation, "horizontal")) {
+            value <- bb_eval_or_fallback(mapping, data, "x", NULL)
+            group <- bb_eval_or_fallback(mapping, data, "y", NULL)
         } else {
-            xlim <- c(1 - width/2, 1 + width/2)
+            value <- bb_eval_or_fallback(mapping, data, "y", NULL)
+            group <- bb_eval_or_fallback(mapping, data, "x", NULL)
         }
-        ylim <- bb_range_union(ylim, y)
+        if (is.null(group)) {
+            positions <- 1
+        } else if (is.factor(group) || is.character(group)) {
+            positions <- as.integer(as.factor(group))
+        } else {
+            positions <- group
+        }
+        if (identical(orientation, "horizontal")) {
+            xlim <- bb_range_union(xlim, value)
+            ylim <- bb_range_union(ylim, positions - width / 2)
+            ylim <- bb_range_union(ylim, positions + width / 2)
+        } else {
+            xlim <- bb_range_union(xlim, positions - width / 2)
+            xlim <- bb_range_union(xlim, positions + width / 2)
+            ylim <- bb_range_union(ylim, value)
+        }
         return(list(xlim = xlim, ylim = ylim))
     }
 
@@ -588,33 +597,45 @@ bb_layer_limits <- function(layer_obj, plot) {
     }
 
     if (identical(ly, ly_violin)) {
-        x <- bb_eval_or_fallback(mapping, data, "x", NULL)
-        y <- bb_eval_or_fallback(mapping, data, "y", NULL)
-        if (is.null(y) || !is.numeric(y)) return(current())
-        width <- layer_obj$params$width %||% 0.9
-        n <- max(length(y), length(x) %||% 0L)
-        y <- rep(y, length.out = n)
-        x <- if (is.null(x)) NULL else rep(x, length.out = n)
-        grp <- bb_group_values(mapping, data, x)
-        pos <- bb_violin_positions(x, grp, n)
-        ok <- is.finite(y) & is.finite(pos$positions) & !is.na(pos$groups)
+        params <- layer_obj$params %||% list()
+        orientation <- params$orientation %||% "vertical"
+        width <- params$width %||% 0.9
+        if (identical(orientation, "horizontal")) {
+            value <- bb_eval_or_fallback(mapping, data, "x", NULL)
+            group_var <- bb_eval_or_fallback(mapping, data, "y", NULL)
+        } else {
+            value <- bb_eval_or_fallback(mapping, data, "y", NULL)
+            group_var <- bb_eval_or_fallback(mapping, data, "x", NULL)
+        }
+        if (is.null(value) || !is.numeric(value)) return(current())
+        n <- max(length(value), length(group_var) %||% 0L)
+        value <- rep(value, length.out = n)
+        group_var <- if (is.null(group_var)) NULL else
+            rep(group_var, length.out = n)
+        grp <- bb_group_values(mapping, data, group_var)
+        pos <- bb_violin_positions(group_var, grp, n)
+        ok <- is.finite(value) & is.finite(pos$positions) &
+            !is.na(pos$groups)
         if (!any(ok)) return(current())
-        xlim <- bb_range_union(xlim, pos$positions[ok] - width / 2)
-        xlim <- bb_range_union(xlim, pos$positions[ok] + width / 2)
-        ylim <- bb_range_union(ylim, y[ok])
-        ## With trim = FALSE the density support extends past the data, so the
-        ## range has to include the estimated support of every group.
-        trim <- layer_obj$params$trim %||% TRUE
+        if (identical(orientation, "horizontal")) {
+            xlim <- bb_range_union(xlim, value[ok])
+            ylim <- bb_range_union(ylim, pos$positions[ok] - width / 2)
+            ylim <- bb_range_union(ylim, pos$positions[ok] + width / 2)
+        } else {
+            xlim <- bb_range_union(xlim, pos$positions[ok] - width / 2)
+            xlim <- bb_range_union(xlim, pos$positions[ok] + width / 2)
+            ylim <- bb_range_union(ylim, value[ok])
+        }
+        ## With trim = FALSE the density support extends past the data.
+        trim <- params$trim %||% TRUE
         if (isFALSE(trim)) {
-            params <- layer_obj$params %||% list()
             bw <- params$bw
             adjust <- params$adjust %||% 1
             kernel <- params$kernel %||% "gaussian"
             n_grid <- params$n %||% 512L
-            grp <- pos$groups
-            gy <- rep(y, length.out = n)
-            for (g in sort(unique(grp))) {
-                values <- gy[grp == g & is.finite(gy)]
+            for (g in sort(unique(pos$groups[ok]))) {
+                values <- value[ok & pos$groups == g]
+                values <- values[is.finite(values)]
                 if (length(values) < 2L || stats::sd(values) == 0) next
                 args <- list(x = values, adjust = adjust, kernel = kernel,
                              n = n_grid, trim = FALSE)
@@ -622,7 +643,12 @@ bb_layer_limits <- function(layer_obj, plot) {
                 d <- suppressWarnings(tryCatch(
                     do.call(stats::density, args), error = function(e) NULL
                 ))
-                if (!is.null(d)) ylim <- bb_range_union(ylim, d$x)
+                if (is.null(d)) next
+                if (identical(orientation, "horizontal")) {
+                    xlim <- bb_range_union(xlim, d$x)
+                } else {
+                    ylim <- bb_range_union(ylim, d$x)
+                }
             }
         }
         return(list(xlim = xlim, ylim = ylim))

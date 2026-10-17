@@ -13,9 +13,15 @@ test_that("coord_flip swaps axes and positional scales", {
     with_test_pdf(expect_silent(print(p)))
 })
 
-test_that("coord_flip refuses layers with their own orientation", {
+test_that("coord_flip flips violin and boxplot", {
     d <- data.frame(x = 1:10, y = 1:10, g = rep(c("a", "b"), 5))
-    p <- bbplot(d, bb_aes(x, y)) + bb_violin() + bb_coord_flip()
+    p <- bbplot(d, bb_aes(g, y)) + bb_violin() + bb_coord_flip()
+    with_test_pdf(expect_silent(print(p)))
+})
+
+test_that("coord_flip refuses layers without an orientation", {
+    d <- data.frame(x = 1:10, y = 1:10)
+    p <- bbplot(d, bb_aes(x, y)) + bb_density() + bb_coord_flip()
     expect_error(with_test_pdf(print(p)), "does not support")
 })
 

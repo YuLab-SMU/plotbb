@@ -32,7 +32,13 @@ bb_bar(
   ...
 )
 
-bb_boxplot(mapping = NULL, data = NULL, inherit = TRUE, ...)
+bb_boxplot(
+  mapping = NULL,
+  data = NULL,
+  inherit = TRUE,
+  orientation = c("vertical", "horizontal"),
+  ...
+)
 
 bb_density(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
@@ -97,7 +103,13 @@ bb_text(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
 bb_tile(mapping = NULL, data = NULL, inherit = TRUE, ...)
 
-bb_violin(mapping = NULL, data = NULL, inherit = TRUE, ...)
+bb_violin(
+  mapping = NULL,
+  data = NULL,
+  inherit = TRUE,
+  orientation = c("vertical", "horizontal"),
+  ...
+)
 }
 \arguments{
 \item{mapping}{aesthetic mapping}
@@ -117,7 +129,8 @@ explicitly.}
 \item{...}{additional parameters: `width` (default 0.9), `adjust` (1),
 `bw`, `kernel`, `trim`, `n`, `alpha`, `border`, `fill`/`col`.}
 
-\item{orientation}{one of 'y' or 'x'}
+\item{orientation}{`"vertical"` (default; `x` groups, `y` values) or
+`"horizontal"` (`x` values, `y` groups).}
 
 \item{se}{display confidence interval around smooth? (TRUE by default, see ggplot2)}
 
@@ -237,10 +250,11 @@ bandwidth, `kernel`, `trim` and `n` are passed to `density()`.
 
 The layer follows the grammar contract: it inherits data and mapping, accepts
 its own, draws in `+` order, honours constant or mapped `fill`/`col`, and
-contributes the group positions and the numeric values to the ranges. Only
-vertical violins are drawn. A group needs at least two finite values and a
-non-zero spread; other groups are skipped with a warning. Rows with a
-non-finite `y` are dropped.
+contributes the group positions and the numeric values to the ranges. With
+`orientation = "horizontal"`, map `x` to the numeric values and `y` to the
+groups; the default vertical orientation is the other way round. A group needs
+at least two finite values and a non-zero spread; other groups are skipped with
+a warning. Rows with a non-finite value are dropped.
 }
 \examples{
 library(plotbb)

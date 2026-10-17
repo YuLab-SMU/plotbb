@@ -694,6 +694,9 @@ than mappings, because there is no per-row value to map.
 
 `bb_violin()` estimates one density per group with `stats::density()` and scales
 it to `width` in x units, so groups with different sample sizes stay comparable.
+With `orientation = "horizontal"`, map the numeric values to `x` and the groups
+to `y`; `bb_boxplot(orientation = "horizontal")` follows the same convention.
+`bb_coord_flip()` turns a vertical violin/boxplot sideways as well.
 `adjust` and `bw` control the bandwidth; `kernel`, `trim` and `n` are passed
 through. The layer is vertical, a group needs at least two finite values with a
 non-zero spread, and a constant group is skipped with a warning rather than
@@ -709,6 +712,13 @@ violin_data <- data.frame(
 )
 bbplot(violin_data, bb_aes(group, value)) +
   bb_violin(fill = "steelblue", alpha = 0.5)
+```
+
+The horizontal form swaps the mapping rather than the drawing code:
+
+```{r plotbb-violin-horizontal}
+bbplot(violin_data, bb_aes(value, group)) +
+  bb_violin(orientation = "horizontal", fill = "steelblue", alpha = 0.5)
 ```
 
 `bb_smooth()` makes the fit explicit: `method` is `"loess"` or `"lm"`,
@@ -1281,8 +1291,9 @@ Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
 * A mapped `col`/`lty` on `bb_line()` applies one value to the whole polyline; a
   polyline cannot change colour halfway. Add a `group` mapping to draw one line
   per group.
-* `bb_coord_flip()` only flips coordinate-symmetric layers; horizontal violin,
-  boxplot and bar need an orientation argument, which is not part of this
-  release.
+* `bb_coord_flip()` flips point/line/text/segment/tile/custom layers,
+  violin/boxplot (toggling their orientation) and hline/vline; bar, density,
+  histogram, ribbon, smooth, lm, errorbar and signif are not flipped.
+* `bb_bar()` is vertical only; horizontal bars are not part of this release.
 * Automatic legends are outside legends; a free-colour facet skips them because
   it cannot have one outside legend for several colour domains.
