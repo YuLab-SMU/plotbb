@@ -80,6 +80,18 @@ bb_flipped_layer <- function(obj, plot = NULL) {
         return(obj)
     }
 
+    if (identical(ly, ly_ribbon)) {
+        obj$mapping <- bb_swap_mapping(obj$mapping)
+        current <- obj$params$orientation %||% "vertical"
+        obj$params$orientation <- if (identical(current, "horizontal")) {
+            "vertical"
+        } else {
+            "horizontal"
+        }
+        swap_limits()
+        return(obj)
+    }
+
     if (identical(ly, ly_errorbar)) {
         obj$mapping <- bb_swap_mapping(obj$mapping)
         current <- obj$params$orientation %||% "y"
@@ -109,7 +121,7 @@ bb_flipped_layer <- function(obj, plot = NULL) {
 
     bb_abort("`bb_coord_flip()` does not support this layer. Supported layers ",
              "are point, line, text, segment, tile, custom layers, violin, ",
-             "boxplot, bar, errorbar and hline/vline.")
+             "boxplot, bar, errorbar, ribbon and hline/vline.")
 }
 
 bb_flip_plot <- function(plot) {

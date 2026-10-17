@@ -428,13 +428,24 @@ bb_layer_limits <- function(layer_obj, plot) {
     }
 
     if (identical(ly, ly_ribbon)) {
-        x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
-        ymin <- eval_mapping(mapping, "ymin", data)
-        ymax <- eval_mapping(mapping, "ymax", data)
-        if (is.null(x) || is.null(ymin) || is.null(ymax)) return(current())
-        xlim <- bb_range_union(xlim, x)
-        ylim <- bb_range_union(ylim, ymin)
-        ylim <- bb_range_union(ylim, ymax)
+        orientation <- layer_obj$params$orientation %||% "vertical"
+        if (identical(orientation, "horizontal")) {
+            center <- bb_eval_or_fallback(mapping, data, "y", NULL)
+            lo <- bb_eval_or_fallback(mapping, data, "xmin", NULL)
+            hi <- bb_eval_or_fallback(mapping, data, "xmax", NULL)
+            if (is.null(center) || is.null(lo) || is.null(hi)) return(current())
+            xlim <- bb_range_union(xlim, lo)
+            xlim <- bb_range_union(xlim, hi)
+            ylim <- bb_range_union(ylim, center)
+        } else {
+            center <- bb_eval_or_fallback(mapping, data, "x", NULL)
+            lo <- eval_mapping(mapping, "ymin", data)
+            hi <- eval_mapping(mapping, "ymax", data)
+            if (is.null(center) || is.null(lo) || is.null(hi)) return(current())
+            xlim <- bb_range_union(xlim, center)
+            ylim <- bb_range_union(ylim, lo)
+            ylim <- bb_range_union(ylim, hi)
+        }
         return(current())
     }
 

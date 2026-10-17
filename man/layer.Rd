@@ -92,7 +92,13 @@ bb_vline(
   ...
 )
 
-bb_ribbon(mapping = NULL, data = NULL, inherit = TRUE, ...)
+bb_ribbon(
+  mapping = NULL,
+  data = NULL,
+  inherit = TRUE,
+  orientation = c("vertical", "horizontal"),
+  ...
+)
 
 bb_segment(mapping = NULL, data = NULL, inherit = TRUE, ...)
 

@@ -21,33 +21,57 @@
 ##' @rdname layer
 ##' @param mapping aesthetic mapping
 ##' @param data layer data
+##' @param orientation `"vertical"` (default; `x`, `ymin`, `ymax`) or
+##'   `"horizontal"` (`y`, `xmin`, `xmax`).
 ##' @param ... additional parameters passed to \code{graphics::polygon}, such
 ##'   as \code{alpha} (default 0.3), \code{border}, \code{lwd} or \code{lty}.
 ##' @return A modified bbplot object
 ##' @importFrom graphics polygon
 ##' @export
 ##' @author Guangchuang Yu
-bb_ribbon <- function(mapping = NULL, data = NULL, inherit = TRUE, ...) {
-    build_layer(mapping, data, inherit = inherit, ..., layer = ly_ribbon)
+bb_ribbon <- function(mapping = NULL, data = NULL, inherit = TRUE,
+                      orientation = c("vertical", "horizontal"), ...) {
+    orientation <- match.arg(orientation)
+    build_layer(mapping, data, inherit = inherit, orientation = orientation,
+                ..., layer = ly_ribbon)
 }
 
 ly_ribbon <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     data <- bb_layer_data(plot, data, mapping)
     params <- list(...)
     mapping <- bb_layer_aesthetics(plot, mapping, inherit, params)
+    orientation <- params$orientation %||% "vertical"
+    params$orientation <- NULL
+    if (!orientation %in% c("vertical", "horizontal")) {
+        bb_abort("`orientation` in `bb_ribbon()` must be 'vertical' or ",
+                 "'horizontal'.")
+    }
 
     ly <- function() {
-        x <- eval_mapping(mapping, "x", data)
-        ymin <- eval_mapping(mapping, "ymin", data)
-        ymax <- eval_mapping(mapping, "ymax", data)
-        if (is.null(x) || is.null(ymin) || is.null(ymax)) {
-            bb_abort("`bb_ribbon()` requires `x`, `ymin` and `ymax` mappings.")
+        if (identical(orientation, "horizontal")) {
+            x <- eval_mapping(mapping, "y", data)
+            ymin <- eval_mapping(mapping, "xmin", data)
+            ymax <- eval_mapping(mapping, "xmax", data)
+            required <- c("y", "xmin", "xmax")
+        } else {
+            x <- eval_mapping(mapping, "x", data)
+            ymin <- eval_mapping(mapping, "ymin", data)
+            ymax <- eval_mapping(mapping, "ymax", data)
+            required <- c("x", "ymin", "ymax")
         }
-
+        if (is.null(x) || is.null(ymin) || is.null(ymax)) {
+            req <- paste0("`", required, "`")
+            req_text <- if (length(req) > 1L) {
+                paste(paste(req[-length(req)], collapse = ", "), "and",
+                      req[[length(req)]])
+            } else {
+                req
+            }
+            bb_abort("`bb_ribbon()` requires ", req_text, " mappings.")
+        }
         if (!is.numeric(x) || !is.numeric(ymin) || !is.numeric(ymax)) {
-            bb_abort("`bb_ribbon()` requires numeric `x`, `ymin` and `ymax`.",
-                     " Use a numeric axis; a discrete band is a box plot or ",
-                     "an error bar.")
+            bb_abort("`bb_ribbon()` requires numeric ", 
+                     paste0("`", required, "`", collapse = ", "), ".")
         }
 
         n <- max(length(x), length(ymin), length(ymax))
@@ -137,10 +161,17 @@ ly_ribbon <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
                 next
             }
             idx <- idx[order(x[idx])]
+            if (identical(orientation, "horizontal")) {
+                poly_x <- c(ymax[idx], rev(ymin[idx]))
+                poly_y <- c(x[idx], rev(x[idx]))
+            } else {
+                poly_x <- c(x[idx], rev(x[idx]))
+                poly_y <- c(ymax[idx], rev(ymin[idx]))
+            }
             args <- c(
                 list(
-                    x = c(x[idx], rev(x[idx])),
-                    y = c(ymax[idx], rev(ymin[idx])),
+                    x = poly_x,
+                    y = poly_y,
                     col = scales::alpha(fill[idx[[1]]], alpha),
                     border = border[idx[[1]]]
                 ),

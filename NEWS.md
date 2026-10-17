@@ -1,3 +1,12 @@
+# plotbb 0.12.0
+
+Horizontal ribbons.
+
++ `bb_ribbon(orientation = "horizontal")` maps `y` to the centre and `xmin`/`xmax`
+  to the band; ranges and the facet panels follow the orientation
++ `bb_coord_flip()` turns a vertical ribbon horizontal by swapping
+  `x`/`y`, `ymin`/`xmin` and `ymax`/`xmax` and toggling the orientation
+
 # plotbb 0.11.0
 
 Horizontal bars, errorbar flipping and outside-legend width control.

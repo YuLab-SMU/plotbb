@@ -79,3 +79,27 @@ test_that("bar orientation and legend width are validated", {
                  "arg")
     expect_error(p + bb_legend(width = 0), "positive number")
 })
+
+test_that("horizontal ribbon puts bounds on x and the centre on y", {
+    d <- data.frame(y = 1:5, lo = c(0, 1, 2, 3, 4), hi = c(2, 3, 4, 5, 6))
+    p <- bbplot(d, bb_aes(y = y, xmin = lo, xmax = hi)) +
+        bb_ribbon(orientation = "horizontal", fill = "steelblue")
+    built <- bb_build(p)
+    expect_lte(built$limits$xlim[[1]], 0)
+    expect_gte(built$limits$xlim[[2]], 6)
+    expect_lte(built$limits$ylim[[1]], 1)
+    expect_gte(built$limits$ylim[[2]], 5)
+    with_test_pdf(expect_silent(print(p)))
+})
+
+test_that("coord_flip turns a vertical ribbon horizontal", {
+    d <- data.frame(x = 1:5, lo = c(0, 1, 2, 3, 4), hi = c(2, 3, 4, 5, 6))
+    p <- bbplot(d, bb_aes(x = x, ymin = lo, ymax = hi)) +
+        bb_ribbon(fill = "steelblue") + bb_coord_flip()
+    built <- bb_build(p)
+    expect_lte(built$limits$xlim[[1]], 0)
+    expect_gte(built$limits$xlim[[2]], 6)
+    expect_lte(built$limits$ylim[[1]], 1)
+    expect_gte(built$limits$ylim[[2]], 5)
+    with_test_pdf(expect_silent(print(p)))
+})

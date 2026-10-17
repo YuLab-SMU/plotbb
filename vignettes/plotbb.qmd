@@ -766,7 +766,8 @@ plot_list(a, b, ncol = 2, tag_levels = "A")
 Two workflows come up often enough to deserve their own layers: a band that
 shows an interval around a line, and reference lines that mark thresholds.
 
-`bb_ribbon()` draws the band between `ymin` and `ymax` along `x`. It follows the
+`bb_ribbon()` draws the band between `ymin` and `ymax` along `x`; with
+`orientation = "horizontal"` the band is between `xmin` and `xmax` along `y`. It follows the
 layer contract: `x`, `ymin` and `ymax` are mapped from the layer's data, a
 constant or mapped `fill` (or `col`) sets the interior, and `alpha` controls its
 transparency. Within a group the points are sorted by `x`, a group needs at
@@ -1292,8 +1293,8 @@ Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
   polyline cannot change colour halfway. Add a `group` mapping to draw one line
   per group.
 * `bb_coord_flip()` flips point/line/text/segment/tile/custom layers,
-  violin/boxplot (toggling their orientation) and hline/vline; bar, density,
-  histogram, ribbon, smooth, lm, errorbar and signif are not flipped.
+  violin/boxplot/bar/errorbar/ribbon (toggling their orientation) and
+  hline/vline; density, histogram, smooth, lm and signif are not flipped.
 * `bb_bar(orientation = "horizontal")` uses categories on `x` for counts and
   numeric values on `x` / categories on `y` for identity bars; horizontal
   identity bars do not aggregate duplicate categories.
