@@ -392,8 +392,7 @@ bb_layer_limits <- function(layer_obj, plot) {
     meta <- layer_obj$meta %||% list()
 
     if (is.function(meta$range)) {
-        extra <- tryCatch(meta$range(plot, data, mapping),
-                          error = function(e) NULL)
+        extra <- meta$range(plot, data, mapping)
         if (!is.null(extra)) {
             if (!is.list(extra) || is.null(names(extra)) ||
                 !all(names(extra) %in% c("x", "y"))) {

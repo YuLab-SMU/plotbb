@@ -1,3 +1,12 @@
+# plotbb 0.9.1
+
+Small fixes after the 0.9.0 release.
+
++ an error inside a custom layer's `range` function now propagates instead of
+  being silently ignored while computing the canvas
++ the grouping-rule paragraph in the vignette matches the unified rule
+  (`group` > discrete `x` > `col` > `fill`)
+
 # plotbb 0.9.0
 
 This release addresses the three structural gaps: positional scales, automatic

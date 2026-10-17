@@ -64,4 +64,10 @@ test_that("a custom layer's range must be a list of x/y", {
     expect_error(with_test_pdf(print(p)), "must return a list")
     expect_error(bb_layer(function(...) NULL, range = 1),
                  "must be a function")
+
+    bad_range <- bbplot(d, bb_aes(x, y)) +
+        bb_layer(function(x, y, ...) graphics::points(x, y),
+                 summary = TRUE,
+                 range = function(...) stop("range boom"))
+    expect_error(with_test_pdf(print(bad_range)), "range boom")
 })

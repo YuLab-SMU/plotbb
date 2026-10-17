@@ -658,9 +658,9 @@ a smoother fits an explicit model, and `bb_signif()` draws comparisons.
 There is no separate statistic API to learn — the summary is part of the layer,
 and its result is what takes part in the ranges.
 
-`bb_hist()` and `bb_density()` share one grouping rule: a discrete `x` groups the
-numeric variable, otherwise an explicit `group` mapping wins, then `col`, then
-`fill`. A constant colour is never a grouping. The rule is stated once and used
+`bb_hist()` and `bb_density()` share one grouping rule with the other
+statistical layers: an explicit `group` mapping wins, then a discrete `x`, then
+`col`, then `fill`. A constant colour is never a grouping. The rule is stated once and used
 both when drawing and when computing the range, so a grouped histogram is
 scaled to the tallest single group rather than to the pooled counts.
 
