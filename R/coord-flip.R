@@ -82,6 +82,9 @@ bb_flipped_layer <- function(obj, plot = NULL) {
 
     if (identical(ly, ly_smooth)) {
         obj$mapping <- bb_swap_mapping(obj$mapping)
+        if (!is.null(obj$params$formula)) {
+            obj$params$formula <- bb_swap_formula_xy(obj$params$formula)
+        }
         current <- obj$params$orientation %||% "vertical"
         obj$params$orientation <- if (identical(current, "horizontal")) {
             "vertical"

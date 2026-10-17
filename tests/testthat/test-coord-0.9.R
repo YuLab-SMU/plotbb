@@ -40,3 +40,12 @@ test_that("coord_flip toggles errorbar orientation", {
         bb_point() + bb_errorbar() + bb_coord_flip()
     with_test_pdf(expect_silent(print(p)))
 })
+
+test_that("coord_flip swaps a smooth formula with the mapping", {
+    set.seed(7)
+    d <- data.frame(t = 1:30, v = sin(1:30 / 5) + rnorm(30, sd = 0.1))
+    p <- bbplot(d, bb_aes(t, v)) +
+        bb_smooth(formula = y ~ x, se = FALSE) +
+        bb_coord_flip()
+    with_test_pdf(expect_silent(print(p)))
+})

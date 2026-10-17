@@ -1,3 +1,12 @@
+# plotbb 0.13.1
+
+Audit fix for horizontal smooth.
+
++ `bb_coord_flip()` now swaps a supplied `bb_smooth()` formula along with the
+  mapping, so a vertical `y ~ x` fit becomes the horizontal `x ~ y` fit instead
+  of failing the response check
++ a regression test covers the flipped formula
+
 # plotbb 0.13.0
 
 Horizontal density, histogram and smooth layers complete the coord-flip story.
