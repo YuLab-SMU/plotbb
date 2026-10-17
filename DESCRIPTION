@@ -1,9 +1,8 @@
 Package: plotbb
 Title: Grammar of Graphics for 'base' Plot
-Version: 0.1.2
-Authors@R: c(
-	   person("Guangchuang", "Yu",     email = "guangchuangyu@gmail.com", role = c("aut", "cre", "cph"), comment = c(ORCID = "0000-0002-6485-8781"))
-     )
+Version: 0.2.0
+Authors@R: person("Guangchuang", "Yu", email = "guangchuangyu@gmail.com",
+    role = c("aut", "cre", "cph"), comment = c(ORCID = "0000-0002-6485-8781"))
 Description: A grammar of graphics framework built on 'base' graphics. It
   provides a 'bbplot' object and a '+' operator to incrementally compose plots
   from data, aesthetic mappings and layers, then render them using the base
@@ -30,4 +29,4 @@ VignetteBuilder: quarto
 ByteCompile: true
 License: Artistic-2.0
 Encoding: UTF-8
-RoxygenNote: 7.3.3
+Config/roxygen2/version: 8.1.1

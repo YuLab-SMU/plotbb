@@ -13,7 +13,9 @@ unset theme (i.e., restore par setting)
 unset bb_theme
 }
 \details{
-remove all the themes by set_bb_theme
+remove all the themes by set_bb_theme. The saved pre-theme graphics
+parameters are discarded afterwards, so the function is safe to call
+repeatedly.
 }
 \author{
 Guangchuang Yu

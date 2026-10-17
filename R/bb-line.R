@@ -5,7 +5,7 @@ bb_line <- function(mapping = NULL, data = NULL, ...) {
 }
 
 ly_line <- function(plot, mapping = NULL, data = NULL, ...) {
-    data <- bb_data(plot, data)
+    data <- bb_layer_data(plot, data, mapping)
     mapping <- bb_mapping(plot, mapping)
 
     params <- list(...)
@@ -14,15 +14,25 @@ ly_line <- function(plot, mapping = NULL, data = NULL, ...) {
     x <- xy$x
     y <- xy$y
 
+    prepared <- bb_prepare_aes(x, y, mapping, data, "bb_line", params)
+    if (is.null(prepared)) {
+        return(add_layer(plot, function() invisible(NULL), "line layer"))
+    }
+    x <- prepared$x
+    y <- prepared$y
+    keep <- prepared$keep
+
     group <- eval_mapping(mapping, "group", data)
 
     ly <- function() {
         col_vec <- NULL
         if (is.null(params$col) && !is.null(mapping$col)) {
-            col_vec <- bb_col(mapping, data, plot = plot)
+            col_vec <- bb_aes_subset(bb_col(mapping, data, plot = plot),
+                                     keep, prepared$n)
         }
 
         if (!is.null(group)) {
+            group <- rep(group, length.out = prepared$n)[keep]
             ug <- unique(group)
             cols <- NULL
             if (!is.null(col_vec)) {

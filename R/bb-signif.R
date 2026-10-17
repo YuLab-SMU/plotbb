@@ -15,7 +15,7 @@ bb_signif <- function(mapping = NULL, data = NULL, ...) {
 }
 
 ly_signif <- function(plot, mapping = NULL, data = NULL, ...) {
-    data <- bb_data(plot, data)
+    data <- bb_layer_data(plot, data, mapping)
     mapping <- bb_mapping(plot, mapping)
     
     params <- list(...)
@@ -45,7 +45,24 @@ ly_signif <- function(plot, mapping = NULL, data = NULL, ...) {
 
     map_signif_level <- params$map_signif_level %||% TRUE
     params$map_signif_level <- NULL
-    
+
+    ## comparisons are plain data, not device-dependent: validate them when the
+    ## layer is built so that a typo surfaces where the layer was written
+    if (!is.null(comparisons)) {
+        if (!is.list(comparisons)) comparisons <- list(comparisons)
+        for (comp in comparisons) {
+            if (!is.character(comp) && !is.numeric(comp)) {
+                bb_abort("each element of `comparisons` must be a character or ",
+                         "numeric vector of two group labels, got: ",
+                         paste(deparse(comp), collapse = ""))
+            }
+            if (length(comp) != 2L) {
+                bb_abort("each element of `comparisons` must have exactly two ",
+                         "group labels, got ", length(comp), ".")
+            }
+        }
+    }
+
     ly <- function() {
         usr <- par("usr")
         y_range <- usr[4] - usr[3]
@@ -58,7 +75,6 @@ ly_signif <- function(plot, mapping = NULL, data = NULL, ...) {
             y_raw <- bb_eval_or_fallback(mapping, data, "y", yvar(mapping))
             if (is.null(x_raw) || is.null(y_raw)) return(invisible(NULL))
 
-            if (!is.list(comparisons)) comparisons <- list(comparisons)
             ncomp <- length(comparisons)
             if (ncomp == 0) return(invisible(NULL))
 
@@ -97,9 +113,12 @@ ly_signif <- function(plot, mapping = NULL, data = NULL, ...) {
                     if (identical(x, "t.test")) return(stats::t.test)
                     return(stats::wilcox.test)
                 }
-                stats::wilcox.test
+                stop("unsupported test", call. = FALSE)
             }
-            test_fun <- resolve_test(test)
+            test_fun <- tryCatch(resolve_test(test), error = function(e) {
+                bb_abort("`test` of `bb_signif()` must be \"t.test\", \"wilcox.test\" ",
+                         "or a function, got: ", paste(deparse(test), collapse = ""))
+            })
     if (identical(test_fun, stats::wilcox.test) && is.null(test_args$exact)) {
         test_args$exact <- FALSE
     }

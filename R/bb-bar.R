@@ -9,11 +9,14 @@ bb_bar <- function(mapping = NULL, data = NULL, stat = "identity", width = 0.9, 
 ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width = 0.9, ...) {
     stat <- match.arg(stat, c("identity", "count"))
 
-    data <- bb_data(plot, data)
+    data <- bb_layer_data(plot, data, mapping)
     mapping <- bb_mapping(plot, mapping)
     if (is.null(data)) stop("bb_bar requires data")
 
     x_raw <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
+    if (is.null(x_raw)) {
+        bb_abort("`bb_bar()` requires an `x` mapping.")
+    }
 
     params <- list(...)
 
@@ -40,6 +43,18 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
         xpos <- seq_along(tab)
         y <- as.numeric(tab)
 
+        ## colours are one per bar, aligned with the levels of x
+        col_per_bar <- NULL
+        if (!is.null(mapping$col)) {
+            col_var <- eval_mapping(mapping, "col", data)
+            col_vec <- bb_col(mapping, data, plot = plot)
+            if (!is.null(col_var) && !is.null(col_vec)) {
+                col_vec <- bb_aes_subset(col_vec, !is.na(x_chr_all), length(x_raw))
+                col_map <- tapply(col_vec, x_chr_all[!is.na(x_chr_all)], function(z) z[[1]])
+                col_per_bar <- unname(col_map[labels])
+            }
+        }
+
         plot$canvas <- function(xlim = NULL, ylim = NULL) {
             xlim_default <- c(min(xpos - width/2), max(xpos + width/2))
             ylim_default <- c(0, max(y, na.rm = TRUE))
@@ -60,14 +75,8 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
                 params
             )
 
-            if (is.null(args$col) && !is.null(mapping$col)) {
-                col_var <- eval_mapping(mapping, "col", data)
-                if (!is.null(col_var)) {
-                    col_vec <- bb_col(mapping, data, plot = plot)
-                    col_map <- tapply(col_vec, as.character(col_var), function(z) z[[1]])
-                    col_fill <- unname(col_map[labels])
-                    args$col <- col_fill
-                }
+            if (is.null(args$col) && !is.null(col_per_bar)) {
+                args$col <- col_per_bar
             }
 
             do.call(graphics::rect, args)
@@ -78,16 +87,34 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
     }
 
     y_raw <- bb_eval_or_fallback(mapping, data, "y", yvar(mapping))
+    if (is.null(y_raw)) {
+        bb_abort("`bb_bar(stat = \"identity\")` requires a `y` mapping.")
+    }
+
+    n <- max(length(x_raw), length(y_raw))
+    bb_check_length(y_raw, length(x_raw), "y", "bb_bar")
+    ok <- bb_valid_rows(rep(x_raw, length.out = n), rep(y_raw, length.out = n))
+    if (!any(ok)) {
+        return(add_layer(plot, function() invisible(NULL), "bar layer"))
+    }
+    x_raw <- rep(x_raw, length.out = n)
+    y_raw <- rep(y_raw, length.out = n)
 
     if (!is.numeric(x_raw)) {
         x_chr <- as.character(x_raw)
-        labels <- unique(x_chr)
+        labels <- unique(x_chr[!is.na(x_chr)])
         xpos <- match(x_chr, labels)
     } else {
         labels <- NULL
         xpos <- x_raw
     }
     y <- y_raw
+
+    col_vec <- if (is.null(params$col) && !is.null(mapping$col)) {
+        bb_col(mapping, data, plot = plot)
+    } else {
+        NULL
+    }
 
     if (!is.null(labels)) {
         plot$canvas <- function(xlim = NULL, ylim = NULL) {
@@ -103,19 +130,16 @@ ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width =
     ly <- function() {
         args <- c(
             list(
-                xleft = xpos - width/2,
+                xleft = (xpos - width/2)[ok],
                 ybottom = 0,
-                xright = xpos + width/2,
-                ytop = y
+                xright = (xpos + width/2)[ok],
+                ytop = y[ok]
             ),
             params
         )
 
-        if (is.null(args$col) && !is.null(mapping$col)) {
-            col_vec <- bb_col(mapping, data, plot = plot)
-            if (!is.null(col_vec)) {
-                args$col <- col_vec
-            }
+        if (is.null(args$col) && !is.null(col_vec)) {
+            args$col <- rep(col_vec, length.out = n)[ok]
         }
 
         do.call(graphics::rect, args)

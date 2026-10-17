@@ -18,11 +18,17 @@ set bb_theme
 \details{
 setting bb_theme for ordinary base plot command. It internally use par to set global graphic parameters. 
 Users need to explictely call unset_bb_theme() to restore original setting.
+
+Themes are single-level: calling `set_bb_theme()` while a theme is already
+active replaces it without losing the original graphics parameters, so
+`unset_bb_theme()` always restores the state from before the *first* call.
+Prefer `with_bb_theme()` when the theme should be scoped to a block of code.
 }
 \examples{
 library(plotbb)
 set_bb_theme(bb_theme_deepblue)
 bbplot(mtcars, bb_aes(mpg, disp, col=factor(cyl))) + bb_point(pch=19)
+unset_bb_theme()
 }
 \author{
 Guangchuang Yu

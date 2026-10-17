@@ -9,10 +9,13 @@ bb_lm <- function(mapping = NULL, data = NULL, se = TRUE, level = 0.95, ...) {
 ##' @importFrom graphics segments polygon
 ##' @importFrom graphics par
 ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
-    data <- bb_data(plot, data)
+    data <- bb_layer_data(plot, data, mapping)
     mapping <- bb_mapping(plot, mapping)
 
     layer_name <- "linear regression layer"
+    if (is.null(mapping$x) || is.null(mapping$y)) {
+        bb_abort("`bb_lm()` requires both `x` and `y` mappings.")
+    }
     formula <- stats::as.formula(paste(yvar(mapping), '~', xvar(mapping)))
     params <- list(...)
     se <- params$se %||% TRUE
@@ -20,7 +23,10 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, ...) {
 
     if (is.null(mapping$group)) {
         d2 <- lm_data(formula, data, se = se, level = level)
-        if (is.null(d2)) return(plot)
+        if (is.null(d2)) {
+            bb_warn("`bb_lm()` could not fit a linear model to the data; skipped.")
+            return(plot)
+        }
         ly <- function() {
             if (se && !is.null(d2$ci)) {
                 ci <- d2$ci

@@ -29,14 +29,22 @@ bb_data <- function(p, data) {
 }
 
 ##' @importFrom utils modifyList
+##
+## The result is a plain named list of quosures. It must not stay a
+## "quosures" object: rlang refuses to `c()` quosure lists with anything else,
+## and layers are evaluated with `rlang::exec()`.
 bb_mapping <- function(p, mapping) {
+    out <- bb_as_mapping_list(p$mapping)
     if (!is.null(mapping)) {
-        mapping <- modifyList(p$mapping, mapping)
-    } else {
-        mapping <- p$mapping
+        out <- modifyList(out, bb_as_mapping_list(mapping))
     }
+    out
+}
 
-    return(mapping)
+bb_as_mapping_list <- function(mapping) {
+    if (is.null(mapping)) return(list())
+    if (!is.list(mapping)) return(list())
+    structure(as.list(mapping), class = NULL)
 }
 
 xvar <- function(mapping) {
@@ -129,6 +137,16 @@ bb_range_union <- function(rng, x) {
     xr <- range(x, na.rm = TRUE)
     if (is.null(rng)) return(xr)
     range(c(rng, xr), na.rm = TRUE)
+}
+
+## limits must always be finite: when no layer contributes a range for an
+## axis, fall back to [0, 1] instead of handing Inf to plot()
+bb_safe_limits <- function(rng, fallback = c(0, 1)) {
+    rng <- bb_expand_range(rng)
+    if (is.null(rng) || length(rng) != 2 || any(!is.finite(rng))) {
+        return(fallback)
+    }
+    rng
 }
 
 bb_expand_range <- function(rng, mult = 0.04) {
@@ -281,6 +299,9 @@ bb_layer_limits <- function(layer_obj, plot) {
 
     if (identical(ly, ly_hist)) {
         x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
+        if (is.null(x) || !is.numeric(x)) return(NULL)
+        x <- x[is.finite(x)]
+        if (length(x) < 2) return(NULL)
         h <- graphics::hist(x, plot = FALSE)
         xlim <- bb_range_union(xlim, h$breaks)
         ylim <- bb_range_union(ylim, c(0, h$counts)) # Assuming counts for now
@@ -412,8 +433,8 @@ bb_plot_limits <- function(plot) {
     }
 
     list(
-        xlim = bb_expand_range(xlim),
-        ylim = bb_expand_range(ylim)
+        xlim = bb_safe_limits(xlim),
+        ylim = bb_safe_limits(ylim)
     )
 }
 

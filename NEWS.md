@@ -1,3 +1,39 @@
+# plotbb 0.2.0
+
+## Graphics state
+
++ `print.bbplot()` now snapshots and restores graphics parameters for **every** plot, not only when a theme is set. Parameters changed by a plot, a theme, or a custom base-graphics layer are restored on normal return **and when a layer raises an error**; the original condition still propagates unchanged
++ `print.bbplot()` no longer leaves `par(new = TRUE)` behind, and faceted plots restore `mfrow`/`oma`/`mar`
++ `unset_bb_theme()` now clears the saved pre-theme state, so it is safe to call repeatedly and `set_bb_theme()` always restores the state from before the first call
++ new `with_bb_theme(theme, code)` applies a theme to the device for the duration of `code` and restores it afterwards, also on error; it is scoped (no options involved) and can be nested
++ `set_bb_theme()` returns the applied theme invisibly
+
+## Input validation
+
++ coordinates that cannot be drawn are handled predictably: rows with `NA`, `NaN` or infinite values are dropped, and a layer whose rows are *all* invalid raises an error instead of reaching `plot()` with `Inf` limits
++ aesthetic mappings are validated when the layer is built: a mapped or literal aesthetic (`col`, `fill`, `pch`, `lty`, `cex`, `label`, `ymin`, `ymax`, `xend`, `yend`, ...) must have length 1 or one value per row. A mismatch is an error naming the aesthetic and the layer, instead of silent vector recycling
++ errors now tell the user which layer needs data (e.g. layers added to `as.bbplot()` objects) and which mapping is missing (`bb_segment()` endpoints, `bb_errorbar()` bounds, `bb_lm()` x/y)
++ `bb_signif()` validates `comparisons` and `test` when the layer is built rather than during drawing
++ `bb_hist()` and `bb_density()` warn once and skip data with too few finite values, instead of failing
++ `bb_plot_limits()` always returns finite limits: a plot without drawable data falls back to `[0, 1]` instead of passing `Inf` to `plot()`
+
+## Reproducible jitter
+
++ `bb_point(position = "jitter")` gained a `seed` argument (default `1`), so jittered positions are reproducible. `seed = NULL` jitters from the current random state
++ jittering never advances the caller's random number stream and never leaves a `.Random.seed` behind when there was none
++ new `bb_position()` builds a jitter position object with its own `width`, `height` and `seed`
+
+## Fixes
+
++ layer arguments are now passed by name (`rlang::exec()` instead of `do.call()`): previously a list-valued argument such as `col = c("red", "blue")` replaced the layer function's formal argument, so the value was silently dropped
++ layers are no longer stacked on top of the previous plot via `par(new = TRUE)`; overlapping plots would produce a garbled figure. Use `aplot::plot_list()` to combine plots
++ `bb_bar(stat = "count")` computes fill colours once instead of inside every redraw
+
+## Tests
+
++ new `test-state.R` covers `par()` restoration on normal return, on error, for faceted plots and for data-less devices, plus `with_bb_theme()` scoping and nesting
++ new `test-inputs.R` covers invalid coordinates, length mismatches, missing data and reproducible jitter
+
 # plotbb 0.1.2
 
 + `bb_density` for density plots, including grouped density polygons with `fill` mapping and alpha blending (2026-05-21, Thu)

@@ -153,6 +153,7 @@ aplot::plot_list(h1, h2, h3, h4, ncol = 2, tag_levels = "A")
 + [x] bb_hist
 + [x] bb_facet_wrap
 + [x] bb_signif
++ [x] bb_density
 
 
 ## Setting labels
@@ -165,6 +166,44 @@ p2 + bb_labs(
   ylab = "this is ylab"
 ) +
   bb_title("hello world")
+```
+
+## Graphics state
+
+`print()` restores the graphics parameters it changes, and does so even when a
+layer fails. This means a `bbplot` object never leaves `par()` behind for the
+next base plot.
+
+```{r plotbb-state}
+p <- bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl)))
+g1 <- p + bb_point(pch = 19) + bb_theme(bg = "lemonchiffon", mar = c(3, 3, 2, 1))
+g2 <- p + bb_point(pch = 19) + bb_title("par() was restored before this plot")
+aplot::plot_list(g1, g2, ncol = 2, tag_levels = "A")
+```
+
+`with_bb_theme()` applies a theme to the device for a block of code and
+restores the previous state afterwards, including when the code fails. Unlike
+`set_bb_theme()`, which changes the device until `unset_bb_theme()` is called,
+it leaves nothing behind and can be nested.
+
+```{r plotbb-with-theme}
+with_bb_theme(bb_theme_deepblue(), {
+  p + bb_point(pch = 19, cex = 2)
+})
+```
+
+## Reproducible jitter
+
+Jittered points use a seed, so the same plot draws the same positions every
+time, and plotting never advances your random number stream.
+
+```{r plotbb-jitter}
+#| fig-height: 4
+d <- data.frame(g = rep(c("a", "b"), each = 40), y = rnorm(80))
+d$x <- as.integer(factor(d$g))
+a <- bbplot(d, bb_aes(x, y)) + bb_point(position = "jitter", seed = 1)
+b <- bbplot(d, bb_aes(x, y)) + bb_point(position = "jitter", seed = 2)
+aplot::plot_list(a, b, ncol = 2, tag_levels = "A")
 ```
 
 ## Theme

@@ -31,7 +31,7 @@ bb_line(mapping = NULL, data = NULL, ...)
 
 bb_lm(mapping = NULL, data = NULL, se = TRUE, level = 0.95, ...)
 
-bb_point(mapping = NULL, data = NULL, position = "identity", ...)
+bb_point(mapping = NULL, data = NULL, position = "identity", ..., seed = 1)
 
 bb_segment(mapping = NULL, data = NULL, ...)
 
@@ -59,6 +59,11 @@ bb_tile(mapping = NULL, data = NULL, ...)
 \item{level}{level of confidence interval to use (0.95 by default)}
 
 \item{position}{one of 'identity' or 'jitter'}
+
+\item{seed}{random seed used by `position = "jitter"`. Defaults to 1, so
+that jittered positions are reproducible; set \code{seed = NULL} to
+jitter from the current random state. The caller's random number stream
+is never modified.}
 }
 \value{
 A modified bbplot object
