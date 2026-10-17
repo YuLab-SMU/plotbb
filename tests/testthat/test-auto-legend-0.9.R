@@ -87,3 +87,10 @@ test_that("free colour facets skip automatic outside legends", {
         bb_facet_wrap(~f, ncol = 2, free_colour = TRUE)
     with_test_pdf(expect_silent(print(p)))
 })
+
+test_that("an outside legend width can be set", {
+    d <- data.frame(x = 1:4, y = 1:4, g = c("a", "a", "b", "b"))
+    p <- bbplot(d, bb_aes(x, y, col = g)) + bb_point() +
+        bb_legend(position = "right", outside = TRUE, width = 2.5)
+    with_test_pdf(expect_silent(print(p)))
+})

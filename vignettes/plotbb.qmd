@@ -1205,7 +1205,7 @@ The error messages are written to point back at a rule. A short map:
 | `bb_text()` | `x`, `y`, optional `label` | a constant `label` wins over a mapping |
 | `bb_segment()` | `x`, `y`, `xend`, `yend` | `x1`/`y1` accepted as aliases |
 | `bb_errorbar()` | `x` + `ymin`/`ymax`, or `y` + `xmin`/`xmax` | `orientation`, `width` |
-| `bb_bar()` | `x` (`stat = "count"`) or `x`, `y` | vertical bars only |
+| `bb_bar()` | `x` (`stat = "count"`) or `x`, `y` | `orientation`; horizontal identity takes `x` values and `y` categories |
 | `bb_boxplot()` | `x`, `y` | groups by `x` |
 | `bb_hist()` | numeric `x`, or discrete `x` with numeric `y` | For discrete `x`, draws comparable `y` histograms within each group; mapped colours are group-based |
 | `bb_density()` | numeric `x`, or discrete `x` with numeric `y` | Grouped by discrete `x` or by `col`/`fill`/`group` |
@@ -1294,6 +1294,8 @@ Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
 * `bb_coord_flip()` flips point/line/text/segment/tile/custom layers,
   violin/boxplot (toggling their orientation) and hline/vline; bar, density,
   histogram, ribbon, smooth, lm, errorbar and signif are not flipped.
-* `bb_bar()` is vertical only; horizontal bars are not part of this release.
+* `bb_bar(orientation = "horizontal")` uses categories on `x` for counts and
+  numeric values on `x` / categories on `y` for identity bars; horizontal
+  identity bars do not aggregate duplicate categories.
 * Automatic legends are outside legends; a free-colour facet skips them because
   it cannot have one outside legend for several colour domains.

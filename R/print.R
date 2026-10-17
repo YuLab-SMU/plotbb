@@ -41,7 +41,8 @@ print.bbplot <- function(x, ...) {
         x$adds
     )
     if (length(outside_legends)) {
-        graphics::layout(matrix(c(1, 2), nrow = 1), widths = c(4, 1.4))
+        graphics::layout(matrix(c(1, 2), nrow = 1),
+                        widths = c(4, bb_outside_legend_width(outside_legends)))
     }
 
     .bbplot <- get_plotbb_env()
@@ -143,7 +144,7 @@ bb_print_facet <- function(x) {
         panel_layout <- matrix(seq_len(nrow * ncol), nrow = nrow, ncol = ncol, byrow = TRUE)
         legend_idx <- max(panel_layout) + 1
         layout_mat <- cbind(panel_layout, rep(legend_idx, nrow))
-        graphics::layout(layout_mat, widths = c(rep(1, ncol), 0.38))
+        graphics::layout(layout_mat, widths = c(rep(1, ncol), bb_outside_legend_width(outside_legends)))
         graphics::par(oma = c(0, 0, top_oma, 0))
     } else {
         par(mfrow = c(nrow, ncol), oma = c(0, 0, top_oma, 0))

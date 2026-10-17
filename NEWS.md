@@ -1,3 +1,27 @@
+# plotbb 0.11.0
+
+Horizontal bars, errorbar flipping and outside-legend width control.
+
+## Bars and error bars
+
++ `bb_bar(orientation = "horizontal")` draws count bars with categories on y and
+  counts on x, and identity bars with numeric values on x and categories on y
++ `bb_coord_flip()` supports `bb_bar()` (count and identity) and
+  `bb_errorbar()` by toggling their orientation; count bars keep the category
+  mapping because counts are computed
+
+## Outside legends
+
++ `bb_legend(width = )` sets the relative width of the outside legend column;
+  the plot layout uses the widest requested legend
++ multiple outside legends continue to stack by their actual drawn height
+
+## Tests and documentation
+
++ test-orientation-0.9.R covers horizontal count and identity bars and their
+  ranges; test-coord-0.9.R covers bar and errorbar flipping
++ the layer reference and known limits describe the horizontal bar mapping
+
 # plotbb 0.10.0
 
 Horizontal statistical layers and a wider coord flip.

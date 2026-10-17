@@ -5,11 +5,12 @@
 ##' the supported layers are redrawn with x/y swapped.
 ##'
 ##' Supported layers are `bb_point()`, `bb_line()`, `bb_text()`,
-##' `bb_segment()`, `bb_tile()`, `bb_layer()`, `bb_violin()` and `bb_boxplot()`
-##' (the last two switch to the opposite `orientation`), plus constant or mapped
-##' `bb_hline()`/`bb_vline()` (which become the other reference line). Layers
-##' that have no orientation model (bar, density, histogram, ribbon, smooth, lm,
-##' errorbar, signif) raise an error rather than drawing in the wrong orientation.
+##' `bb_segment()`, `bb_tile()`, `bb_layer()`, `bb_violin()`, `bb_boxplot()`,
+##' `bb_bar()` and `bb_errorbar()` (the last four switch to the opposite
+##' `orientation`), plus constant or mapped `bb_hline()`/`bb_vline()` (which
+##' become the other reference line). Layers that have no orientation model
+##' (density, histogram, ribbon, smooth, lm, signif) raise an error rather than
+##' drawing in the wrong orientation.
 ##'
 ##' @title bb_coord_flip
 ##' @return A modified bbplot object
@@ -51,30 +52,64 @@ bb_swap_labs <- function(labs) {
     labs
 }
 
-bb_flipped_layer <- function(obj) {
+bb_flipped_layer <- function(obj, plot = NULL) {
     ly <- obj$layer
-    supported <- list(ly_point, ly_line, ly_text, ly_segment, ly_tile, ly_custom)
-    if (any(vapply(supported, identical, logical(1), ly)) ||
-        identical(ly, ly_violin) || identical(ly, ly_boxplot)) {
-        obj$mapping <- bb_swap_mapping(obj$mapping)
-        if (identical(ly, ly_violin) || identical(ly, ly_boxplot)) {
-            current <- obj$params$orientation %||% "vertical"
-            obj$params$orientation <- if (identical(current, "horizontal")) {
-                "vertical"
-            } else {
-                "horizontal"
-            }
-        }
+    swap_limits <- function() {
         if (!is.null(obj$limits)) {
             old <- obj$limits
             obj$limits <- list(x = old$y, y = old$x)
             obj$limits <- obj$limits[!vapply(obj$limits, is.null, logical(1))]
         }
+    }
+
+    if (identical(ly, ly_bar) || identical(ly, ly_bar_horizontal)) {
+        stat <- obj$params$stat %||% "identity"
+        if (identical(stat, "count")) {
+            ## A count bar has only a category mapping; it stays on x because
+            ## counts are computed, not mapped.
+            if (is.null(obj$mapping$x) && !is.null(plot$mapping$x)) {
+                obj$mapping$x <- plot$mapping$x
+            }
+            obj$mapping$y <- NULL
+        } else {
+            obj$mapping <- bb_swap_mapping(obj$mapping)
+        }
+        obj$layer <- if (identical(ly, ly_bar_horizontal)) ly_bar else
+            ly_bar_horizontal
+        swap_limits()
         return(obj)
     }
+
+    if (identical(ly, ly_errorbar)) {
+        obj$mapping <- bb_swap_mapping(obj$mapping)
+        current <- obj$params$orientation %||% "y"
+        obj$params$orientation <- if (identical(current, "x")) "y" else "x"
+        swap_limits()
+        return(obj)
+    }
+
+    if (identical(ly, ly_violin) || identical(ly, ly_boxplot)) {
+        obj$mapping <- bb_swap_mapping(obj$mapping)
+        current <- obj$params$orientation %||% "vertical"
+        obj$params$orientation <- if (identical(current, "horizontal")) {
+            "vertical"
+        } else {
+            "horizontal"
+        }
+        swap_limits()
+        return(obj)
+    }
+
+    supported <- list(ly_point, ly_line, ly_text, ly_segment, ly_tile, ly_custom)
+    if (any(vapply(supported, identical, logical(1), ly))) {
+        obj$mapping <- bb_swap_mapping(obj$mapping)
+        swap_limits()
+        return(obj)
+    }
+
     bb_abort("`bb_coord_flip()` does not support this layer. Supported layers ",
              "are point, line, text, segment, tile, custom layers, violin, ",
-             "boxplot and hline/vline.")
+             "boxplot, bar, errorbar and hline/vline.")
 }
 
 bb_flip_plot <- function(plot) {
@@ -133,7 +168,7 @@ bb_flip_plot <- function(plot) {
             next
         }
         if (inherits(obj, "bb_layer")) {
-            flipped <- flipped + bb_flipped_layer(obj)
+            flipped <- flipped + bb_flipped_layer(obj, plot)
             next
         }
         if (inherits(obj, "bb_facet_wrap") || inherits(obj, "bb_facet_grid") ||

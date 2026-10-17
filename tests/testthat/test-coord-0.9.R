@@ -33,3 +33,10 @@ test_that("coord_flip keeps facets and labels consistent", {
     built <- bb_build(p)
     expect_equal(length(built$panels), 2)
 })
+
+test_that("coord_flip toggles errorbar orientation", {
+    d <- data.frame(x = 1:4, y = 1:4, lo = 0:3, hi = 2:5)
+    p <- bbplot(d, bb_aes(x, y, ymin = lo, ymax = hi)) +
+        bb_point() + bb_errorbar() + bb_coord_flip()
+    with_test_pdf(expect_silent(print(p)))
+})

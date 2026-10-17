@@ -18,11 +18,12 @@ data transformation: axes labels, positional scales and the titles swap, and
 the supported layers are redrawn with x/y swapped.
 
 Supported layers are `bb_point()`, `bb_line()`, `bb_text()`,
-`bb_segment()`, `bb_tile()`, `bb_layer()`, `bb_violin()` and `bb_boxplot()`
-(the last two switch to the opposite `orientation`), plus constant or mapped
-`bb_hline()`/`bb_vline()` (which become the other reference line). Layers
-that have no orientation model (bar, density, histogram, ribbon, smooth, lm,
-errorbar, signif) raise an error rather than drawing in the wrong orientation.
+`bb_segment()`, `bb_tile()`, `bb_layer()`, `bb_violin()`, `bb_boxplot()`,
+`bb_bar()` and `bb_errorbar()` (the last four switch to the opposite
+`orientation`), plus constant or mapped `bb_hline()`/`bb_vline()` (which
+become the other reference line). Layers that have no orientation model
+(density, histogram, ribbon, smooth, lm, signif) raise an error rather than
+drawing in the wrong orientation.
 }
 \author{
 Guangchuang Yu

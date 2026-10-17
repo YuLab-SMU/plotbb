@@ -29,6 +29,7 @@ bb_bar(
   stat = "identity",
   width = 0.9,
   inherit = TRUE,
+  orientation = c("vertical", "horizontal"),
   ...
 )
 
@@ -126,11 +127,11 @@ mapping that is not repeated locally is unavailable; the layer's
 \code{data} is still inherited from \code{bbplot()} unless given
 explicitly.}
 
-\item{...}{additional parameters: `width` (default 0.9), `adjust` (1),
-`bw`, `kernel`, `trim`, `n`, `alpha`, `border`, `fill`/`col`.}
-
 \item{orientation}{`"vertical"` (default; `x` groups, `y` values) or
 `"horizontal"` (`x` values, `y` groups).}
+
+\item{...}{additional parameters: `width` (default 0.9), `adjust` (1),
+`bw`, `kernel`, `trim`, `n`, `alpha`, `border`, `fill`/`col`.}
 
 \item{se}{display confidence interval around smooth? (TRUE by default, see ggplot2)}
 

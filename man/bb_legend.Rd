@@ -15,6 +15,7 @@ bb_legend(
   layer = NULL,
   style = c("auto", "bar"),
   title_width = NULL,
+  width = 1.4,
   ...
 )
 }
@@ -43,6 +44,8 @@ the mapping/title, not a separate domain.}
 col/fill legend as adjacent colour blocks (a discrete gradient).}
 
 \item{title_width}{optional positive integer; wraps a long legend title.}
+
+\item{width}{relative width of an outside legend column (default 1.4).}
 
 \item{...}{additional parameters passed to \code{graphics::legend}.}
 }

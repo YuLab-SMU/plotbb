@@ -365,7 +365,7 @@ bb_layer_is_summary <- function(layer_obj) {
     if (!inherits(layer_obj, "bb_layer")) return(FALSE)
     if (isTRUE((layer_obj$meta %||% list())$summary)) return(TRUE)
     summary_layers <- list(ly_hist, ly_density, ly_bar, ly_boxplot, ly_lm,
-                           ly_signif, ly_violin)
+                           ly_signif, ly_violin, ly_bar_horizontal)
     any(vapply(summary_layers, identical, logical(1), layer_obj$layer))
 }
 
@@ -503,6 +503,39 @@ bb_layer_limits <- function(layer_obj, plot) {
                 ylim <- bb_range_union(ylim, c(d2$ci$lwr, d2$ci$upr))
             }
         }
+        return(list(xlim = xlim, ylim = ylim))
+    }
+
+    if (identical(ly, ly_bar_horizontal)) {
+        stat <- layer_obj$params$stat %||% "identity"
+        width <- layer_obj$params$width %||% 0.9
+        x_raw <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
+        if (identical(stat, "count")) {
+            x_chr <- as.character(x_raw)
+            x_chr <- x_chr[!is.na(x_chr)]
+            if (!length(x_chr)) return(current())
+            labels <- bb_discrete_levels(x_raw)
+            counts <- as.numeric(table(factor(x_chr, levels = labels)))
+            positions <- seq_along(labels)
+            xlim <- bb_range_union(xlim, c(0, counts))
+            ylim <- bb_range_union(ylim, positions - width / 2)
+            ylim <- bb_range_union(ylim, positions + width / 2)
+            return(list(xlim = xlim, ylim = ylim))
+        }
+        y_raw <- bb_eval_or_fallback(mapping, data, "y", yvar(mapping))
+        if (is.null(y_raw) || !is.numeric(x_raw)) return(current())
+        n <- max(length(x_raw), length(y_raw))
+        x_raw <- rep(x_raw, length.out = n)
+        y_raw <- rep(y_raw, length.out = n)
+        if (is.factor(y_raw) || is.character(y_raw)) {
+            positions <- match(as.character(y_raw),
+                               unique(as.character(y_raw)))
+        } else {
+            positions <- as.numeric(y_raw)
+        }
+        xlim <- bb_range_union(xlim, c(0, x_raw))
+        ylim <- bb_range_union(ylim, positions - width / 2)
+        ylim <- bb_range_union(ylim, positions + width / 2)
         return(list(xlim = xlim, ylim = ylim))
     }
 

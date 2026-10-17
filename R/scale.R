@@ -505,6 +505,7 @@ bb_default_colour <- function(plot, x, palette = NULL) {
 ##' @param style \code{"auto"} or \code{"bar"}; a bar draws a discrete
 ##'   col/fill legend as adjacent colour blocks (a discrete gradient).
 ##' @param title_width optional positive integer; wraps a long legend title.
+##' @param width relative width of an outside legend column (default 1.4).
 ##' @param ... additional parameters passed to \code{graphics::legend}.
 ##' @return A modified bbplot object
 ##' @export
@@ -513,7 +514,7 @@ bb_legend <- function(position = "topright", title = NULL, aesthetic = "col",
                       pch = 19, bty = "n", outside = FALSE,
                       orientation = c("vertical", "horizontal"),
                       layer = NULL, style = c("auto", "bar"),
-                      title_width = NULL, ...) {
+                      title_width = NULL, width = 1.4, ...) {
     orientation <- match.arg(orientation)
     style <- match.arg(style)
     if (!is.null(layer) &&
@@ -521,6 +522,10 @@ bb_legend <- function(position = "topright", title = NULL, aesthetic = "col",
         !(is.character(layer) && length(layer) == 1L)) {
         bb_abort("`layer` in `bb_legend()` must be a layer index, a layer ",
                  "name or NULL.")
+    }
+    if (!is.numeric(width) || length(width) != 1L || !is.finite(width) ||
+        width <= 0) {
+        bb_abort("`width` in `bb_legend()` must be a positive number.")
     }
     if (!is.null(title_width)) {
         if (!is.numeric(title_width) || length(title_width) != 1L ||
@@ -543,6 +548,7 @@ bb_legend <- function(position = "topright", title = NULL, aesthetic = "col",
             layer = layer,
             style = style,
             title_width = title_width,
+            width = width,
             params = list(...)
         ),
         class = "bb_legend"
@@ -615,6 +621,11 @@ bb_legend_layer <- function(plot, layer, aesthetic) {
 bb_wrap_title <- function(title, width) {
     if (is.null(title) || is.null(width)) return(title)
     paste(strwrap(as.character(title), width = width), collapse = "\n")
+}
+
+bb_outside_legend_width <- function(legends) {
+    if (!length(legends)) return(1.4)
+    max(vapply(legends, function(obj) obj$width %||% 1.4, numeric(1)))
 }
 
 bb_draw_legend <- function(object, plot) {

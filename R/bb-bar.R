@@ -1,9 +1,20 @@
 ##' @rdname layer
 ##' @param stat one of 'identity' or 'count'
 ##' @param width bar width or errorbar cap width
+##' @param orientation `"vertical"` (default) or `"horizontal"`. A horizontal
+##'   count bar keeps the categories on `x` and puts counts on the x axis; a
+##'   horizontal identity bar takes numeric values from `x` and categories from
+##'   `y`.
 ##' @export
-bb_bar <- function(mapping = NULL, data = NULL, stat = "identity", width = 0.9, inherit = TRUE, ...) {
-    build_layer(mapping, data, inherit = inherit, ..., layer = ly_bar, stat = stat, width = width)
+bb_bar <- function(mapping = NULL, data = NULL, stat = "identity", width = 0.9,
+                   inherit = TRUE, orientation = c("vertical", "horizontal"), ...) {
+    orientation <- match.arg(orientation)
+    if (identical(orientation, "horizontal")) {
+        return(bb_bar_horizontal(mapping, data, stat = stat, width = width,
+                                 inherit = inherit, ...))
+    }
+    build_layer(mapping, data, inherit = inherit, ..., layer = ly_bar,
+                stat = stat, width = width)
 }
 
 ly_bar <- function(plot, mapping = NULL, data = NULL, stat = "identity", width = 0.9, inherit = TRUE, ...) {
