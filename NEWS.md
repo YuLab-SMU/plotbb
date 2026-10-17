@@ -1,3 +1,45 @@
+# plotbb 0.4.0
+
+This release adds the high-frequency scientific layers and keeps them inside
+the grammar contract: data/mapping inheritance, constant aesthetics, range
+contribution, draw order and facets behave as everywhere else.
+
+## New layers
+
++ `bb_ribbon()` draws a band between `ymin` and `ymax` along `x`, one polygon
+  per group, sorted by `x`; rows with a missing or non-finite coordinate are
+  dropped (a missing group warns), a group needs two finite points and is
+  skipped with a warning otherwise, `alpha` (0-1) controls transparency (0.3),
+  `border`/`lty`/`lwd` are layer-wide, and `fill`/`col` can be mapped or
+  constant
++ `bb_hline()` and `bb_vline()` draw reference lines at constant or mapped
+  `yintercept`/`xintercept` positions; a mapped position can carry `col` and
+  `lty` per line
++ reference lines do not change the axis ranges by default; set
+  `expand_limits = TRUE` when the intercept must be inside the visible range
+
+## Facets
+
++ `bb_facet_wrap()` validates `nrow`/`ncol` (positive integers) and reports a
+  layout that is too small for the number of panels instead of silently
+  overwriting panels
+
+## Layer contract
+
++ an inherited mapping that cannot be evaluated on a layer's own data no
+  longer raises "object not found" while computing ranges; that layer simply
+  contributes no range for it, which keeps `bb_ribbon(data = ...)` and similar
+  partial-data layers usable
+
+## Tests and documentation
+
++ new `test-layers-0.4.R` covers ribbon sorting/grouping/ranges/fill, reference
+  line positions, mapped intercepts, `expand_limits`, facet rendering and
+  layout validation
++ the vignette has a "Bands and reference lines" section with a confidence
+  band workflow and threshold lines
++ `notes/0.4.0-layers.md` records the layer decisions
+
 # plotbb 0.3.0
 
 This release unifies the scale and legend semantics: one trained scale per

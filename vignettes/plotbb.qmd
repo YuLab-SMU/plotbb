@@ -601,6 +601,73 @@ b <- bbplot(mtcars, bb_aes(mpg, disp, group = cyl, col = factor(cyl))) +
 plot_list(a, b, ncol = 2, tag_levels = "A")
 ```
 
+## Bands and reference lines
+
+Two workflows come up often enough to deserve their own layers: a band that
+shows an interval around a line, and reference lines that mark thresholds.
+
+`bb_ribbon()` draws the band between `ymin` and `ymax` along `x`. It follows the
+layer contract: `x`, `ymin` and `ymax` are mapped from the layer's data, a
+constant or mapped `fill` (or `col`) sets the interior, and `alpha` controls its
+transparency. Within a group the points are sorted by `x`, a group needs at
+least two points (smaller groups are skipped with a warning), and rows with a
+missing or non-finite coordinate are dropped; a missing group warns as well.
+The band contributes its three coordinates to the ranges, so it can extend the
+canvas without a separate call.
+
+```{r plotbb-ribbon}
+fit <- lm(disp ~ mpg, data = mtcars)
+grid <- data.frame(mpg = seq(min(mtcars$mpg), max(mtcars$mpg),
+                             length.out = 50))
+ci <- as.data.frame(predict(fit, newdata = grid, interval = "confidence"))
+ci$mpg <- grid$mpg
+
+bbplot(mtcars, bb_aes(mpg, disp)) +
+  bb_ribbon(bb_aes(x = mpg, ymin = lwr, ymax = upr), data = ci,
+            fill = "steelblue", alpha = 0.3) +
+  bb_point(pch = 19, col = "grey40") +
+  bb_lm(lwd = 1.5, se = FALSE, col = "firebrick")
+```
+
+With a mapped `fill` the band is drawn per group. The grouping rule is the same
+one the summary layers use: an explicit `group` wins, otherwise `fill` decides.
+
+```{r plotbb-ribbon-groups}
+bands <- data.frame(
+  x = rep(1:5, 2),
+  lo = c(1, 2, 3, 4, 5, 2, 3, 4, 5, 6) - 0.4,
+  hi = c(1, 2, 3, 4, 5, 2, 3, 4, 5, 6) + 0.4,
+  g = factor(rep(c("a", "b"), each = 5))
+)
+
+bbplot(bands, bb_aes(x, fill = g)) +
+  bb_ribbon(bb_aes(ymin = lo, ymax = hi), alpha = 0.3)
+```
+
+`bb_hline()` and `bb_vline()` mark reference positions. The intercept is either
+a constant or a mapping, so thresholds can come from the data; a mapped
+intercept can also carry `col` and `lty` per line.
+
+```{r plotbb-reference-lines}
+thresholds <- data.frame(threshold = c(100, 300))
+
+bbplot(mtcars, bb_aes(mpg, disp)) +
+  bb_point(pch = 19, col = "grey40") +
+  bb_hline(mapping = bb_aes(yintercept = threshold), data = thresholds,
+           lty = 2, col = "steelblue") +
+  bb_vline(20, col = "firebrick", lty = 3)
+```
+
+By default a reference line does **not** change the axis range: a line at the
+edge of the data should not silently stretch the canvas. `expand_limits = TRUE`
+is the explicit opt-in when the intercept must be inside the visible range.
+
+```{r plotbb-reference-expand}
+bbplot(mtcars, bb_aes(mpg, disp)) +
+  bb_point(pch = 19, col = "grey40") +
+  bb_hline(500, col = "grey50", lty = 2, expand_limits = TRUE)
+```
+
 ## Heatmaps
 
 `bb_tile()` draws one rectangle per row, positioned at the `x`/`y` coordinates
@@ -845,6 +912,9 @@ The error messages are written to point back at a rule. A short map:
 | `bb_hist()` | numeric `x`, or discrete `x` with numeric `y` | For discrete `x`, draws comparable `y` histograms within each group; mapped colours are group-based |
 | `bb_density()` | numeric `x`, or discrete `x` with numeric `y` | Grouped by discrete `x` or by `col`/`fill`/`group` |
 | `bb_tile()` | `x`, `y`, `col` (or `fill`) | heatmap tiles |
+| `bb_ribbon()` | `x`, `ymin`, `ymax` | sorted by `x`; `alpha`, `border`; one band per group |
+| `bb_hline()` | `yintercept` or a `yintercept` mapping | no range change unless `expand_limits = TRUE` |
+| `bb_vline()` | `xintercept` or a `xintercept` mapping | no range change unless `expand_limits = TRUE` |
 | `bb_lm()` | `x`, `y`, optional `group` | `se`, `level` |
 | `bb_signif()` | `comparisons`, or `xmin`/`xmax`/`y_position` | extends the y range |
 | `bb_layer()` | a drawing function | your own layer; `limits` declares extra range |
@@ -866,6 +936,9 @@ trained by a scale:
 | `bb_hist()` | `col` |
 | `bb_density()` | `col`, `fill` |
 | `bb_tile()` | `col`, `fill` |
+| `bb_ribbon()` | `col`, `fill` |
+| `bb_hline()` | `col`, `lty` (per line when the intercept is mapped) |
+| `bb_vline()` | `col`, `lty` (per line when the intercept is mapped) |
 | `bb_lm()` | `col`, `lty` |
 | `bb_signif()` | none (constant `col` only) |
 | `bb_layer()` | whatever the drawing function accepts (`col`, `fill`, `pch`, `lty`, `cex`, `label` are resolved) |
@@ -894,6 +967,5 @@ Components: `bb_facet_wrap()`, `bb_legend()`, `bb_labs()` (and `bb_title()`,
 * `+` combines components of one plot; for several plots use
   `aplot::plot_list()`.
 * Planned for later releases and therefore **not** part of this grammar:
-  `bb_ribbon()`, `bb_hline()`, `bb_vline()`, `bb_violin()`, `bb_smooth()`,
-  `bb_facet_grid()`, `bb_build()`, `bb_save()`, a per-layer legend and free
-  colour scales by facet.
+  `bb_violin()`, `bb_smooth()`, `bb_facet_grid()`, `bb_build()`, `bb_save()`,
+  a per-layer legend and free colour scales by facet.

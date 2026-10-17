@@ -21,6 +21,13 @@ A modified bbplot object
 \description{
 Facet a bbplot object into multiple panels.
 }
+\details{
+\code{nrow} and \code{ncol} must be positive integers, and their
+product must be at least the number of panels; a layout that is too small is
+reported instead of silently overwriting a panel. Facets are built from the
+keys that occur in the data, so unused factor levels do not create empty
+panels.
+}
 \author{
 Guangchuang Yu
 }

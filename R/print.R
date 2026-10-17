@@ -89,6 +89,15 @@ bb_print_facet <- function(x) {
     ## Train once on the full plot: every panel shares the same domain.
     x <- bb_train_scales(x)
 
+    for (nm in c("nrow", "ncol")) {
+        value <- facet[[nm]]
+        if (is.null(value)) next
+        if (!is.numeric(value) || length(value) != 1L || is.na(value) ||
+            value < 1 || value != as.integer(value)) {
+            bb_abort("`", nm, "` in `bb_facet_wrap()` must be a positive integer.")
+        }
+    }
+
     facet_expr <- rlang::f_rhs(facet$facets)
     facet_vars <- all.vars(facet_expr)
     facet_val <- rlang::eval_tidy(facet_expr, data = data)
@@ -114,6 +123,11 @@ bb_print_facet <- function(x) {
     } else {
         ncol <- ceiling(sqrt(length(lev)))
         nrow <- ceiling(length(lev) / ncol)
+    }
+
+    if (nrow * ncol < length(lev)) {
+        bb_abort("`nrow * ncol` (", nrow * ncol, ") is smaller than the ",
+                 "number of panels (", length(lev), ").")
     }
 
     global_main <- x$labs$main
@@ -296,6 +310,11 @@ bb_facet_layer_data <- function(layer_data, facet, panel, idx, n_plot) {
 ##' @param ncol number of columns.
 ##' @param nrow number of rows.
 ##' @param scales scale behavior across facets, one of 'fixed', 'free', 'free_x', or 'free_y'.
+##' @details \code{nrow} and \code{ncol} must be positive integers, and their
+##' product must be at least the number of panels; a layout that is too small is
+##' reported instead of silently overwriting a panel. Facets are built from the
+##' keys that occur in the data, so unused factor levels do not create empty
+##' panels.
 ##' @return A modified bbplot object
 ##' @export
 ##' @author Guangchuang Yu

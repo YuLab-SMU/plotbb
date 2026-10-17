@@ -122,9 +122,20 @@ eval_mapping <- function(mapping, name, data) {
 }
 
 bb_eval_or_fallback <- function(mapping, data, name, fallback_var = NULL) {
-    v <- eval_mapping(mapping, name, data)
+    ## A layer's own data need not carry every inherited variable; an
+    ## expression that cannot be evaluated on this data simply contributes
+    ## nothing to the range instead of raising "object not found".
+    v <- tryCatch(eval_mapping(mapping, name, data), error = function(e) {
+        ## Only a variable absent from this layer's data is tolerated; a broken
+        ## expression is still an error and should surface.
+        if (grepl("not found", conditionMessage(e), fixed = TRUE)) return(NULL)
+        stop(e)
+    })
     if (!is.null(v)) return(v)
-    if (!is.null(fallback_var)) return(data[[fallback_var]])
+    if (!is.null(fallback_var) && !is.null(data) &&
+        fallback_var %in% names(data)) {
+        return(data[[fallback_var]])
+    }
     NULL
 }
 
@@ -286,6 +297,11 @@ bb_plot_summarises <- function(plot) {
     }, logical(1)))
 }
 
+bb_layer_is_reference <- function(layer_obj) {
+    if (!inherits(layer_obj, "bb_layer")) return(FALSE)
+    any(vapply(list(ly_hline, ly_vline), identical, logical(1), layer_obj$layer))
+}
+
 bb_layer_is_summary <- function(layer_obj) {
     if (!inherits(layer_obj, "bb_layer")) return(FALSE)
     summary_layers <- list(ly_hist, ly_density, ly_bar, ly_boxplot, ly_lm,
@@ -312,13 +328,40 @@ bb_layer_limits <- function(layer_obj, plot) {
 
     data <- bb_data(plot, layer_obj$data)
     mapping <- bb_layer_mapping(plot, layer_obj)
+    ly <- layer_obj$layer
+
+    if (identical(ly, ly_hline) || identical(ly, ly_vline)) {
+        if (isTRUE(layer_obj$params$expand_limits)) {
+            if (identical(ly, ly_hline)) {
+                ref <- bb_reference_values(mapping, data,
+                                           layer_obj$params$yintercept,
+                                           "yintercept")
+                ylim <- bb_range_union(ylim, ref$values)
+            } else {
+                ref <- bb_reference_values(mapping, data,
+                                           layer_obj$params$xintercept,
+                                           "xintercept")
+                xlim <- bb_range_union(xlim, ref$values)
+            }
+        }
+        return(current())
+    }
 
     if (is.null(data) || !length(mapping)) {
         if (is.null(xlim) && is.null(ylim)) return(NULL)
         return(list(xlim = xlim, ylim = ylim))
     }
 
-    ly <- layer_obj$layer
+    if (identical(ly, ly_ribbon)) {
+        x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
+        ymin <- eval_mapping(mapping, "ymin", data)
+        ymax <- eval_mapping(mapping, "ymax", data)
+        if (is.null(x) || is.null(ymin) || is.null(ymax)) return(current())
+        xlim <- bb_range_union(xlim, x)
+        ylim <- bb_range_union(ylim, ymin)
+        ylim <- bb_range_union(ylim, ymax)
+        return(current())
+    }
 
     if (identical(ly, ly_segment)) {
         x <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
@@ -604,8 +647,9 @@ bb_plot_limits <- function(plot) {
     if (length(plot$adds)) {
         for (obj in plot$adds) {
             if (!inherits(obj, "bb_layer") || !is.data.frame(obj$data)) next
-            ## A summary layer's mapped y is data, not a coordinate.
-            if (bb_layer_is_summary(obj)) next
+            ## A summary layer's mapped y is data, not a coordinate; a
+            ## reference line does not change the range unless it declares so.
+            if (bb_layer_is_summary(obj) || bb_layer_is_reference(obj)) next
             mapping <- bb_layer_mapping(plot, obj)
             if (!length(mapping)) next
             xy <- bb_eval_xy(mapping, obj$data)
