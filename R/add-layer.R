@@ -7,23 +7,59 @@
                  "complete plots. Use `aplot::plot_list()` to arrange ",
                  "several `bbplot` objects.")
     }
+    ## A component method may add layers/components through `+`; those are
+    ## produced by the component itself and must not be re-added a second time
+    ## when a facet panel is rebuilt. Mark them so the facet loops can skip
+    ## them and re-run the owning component instead.
+    if (isTRUE(getOption("plotbb.in_add"))) {
+        attr(e2, "bb_generated") <- TRUE
+    }
     e1$adds[[length(e1$adds) + 1]] <- e2
     bbplot_add(e2, e1)
 }
 
 ##' Add custom objects to bbplot
 ##'
-##' This generic allows you to add your own methods for
-##' adding custom objects to a bbplot object.
+##' This generic is the extension point for new kinds of components. A method
+##' receives the object and the plot and must return the modified plot; it
+##' should describe the resulting plot instead of drawing, and can rely on the
+##' public \code{bb_layer()} (or the other public constructors) to add the
+##' drawing.
+##'
+##' A method must not draw directly, change the device or rely on internal
+##' helpers such as \code{build_layer()}; those are implementation details and
+##' are not part of the stable contract. Packages register the method with
+##' \code{S3method(bbplot_add, <class>)} in their \code{NAMESPACE}. A component
+##' added this way takes part in the \code{+} order and in the graphics-state
+##' restoration like every other component, and it is re-applied to every facet
+##' panel. The layers a method adds are not added a second time when a panel is
+##' rebuilt: the owning component is re-run instead.
 ##'
 ##' @title bbplot_add
 ##' @param object An object to add to the plot
 ##' @param plot The bbplot object to add `object` to
 ##' @return A modified bbplot object
-##' @keywords internal
+##' @seealso \code{\link{bb_layer}}
 ##' @export
+##' @examples
+##' bb_note <- function(label) {
+##'     structure(list(label = label), class = "bb_note")
+##' }
+##'
+##' bbplot_add.bb_note <- function(object, plot) {
+##'     plot + bb_layer(function(x, y, ...) {
+##'         graphics::text(mean(range(x)), mean(range(y)), object$label)
+##'     })
+##' }
+##'
+##' bbplot(mtcars, bb_aes(mpg, disp)) +
+##'     bb_point(pch = 19) +
+##'     bb_note("a third-party component")
 ##' @author Guangchuang Yu
 bbplot_add <- function(object, plot) {
+    old <- getOption("plotbb.in_add")
+    options(plotbb.in_add = TRUE)
+    on.exit(options(plotbb.in_add = old), add = TRUE)
     UseMethod("bbplot_add")
 }
 

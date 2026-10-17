@@ -1,3 +1,66 @@
+# plotbb 0.5.0
+
+This release adds the build and save workflow: a plot can be inspected without
+drawing it and written to a file without disturbing the caller's graphics state.
+
+## bb_build()
+
++ `bb_build()` performs the computation `print()` performs — trains the scales,
+  resolves the mappings, collects layer data and computes the limits — and
+  returns a plain list with `data`, `mapping` (labels), `layers` (name, data,
+  mapping labels, inherit, parameter names), `scales`, `limits`, `panels`,
+  `labs`, `facet` and `warnings`
++ it does not open a device, change `par()` or touch `.Random.seed`; repeated
+  builds of the same object return the same structure and limits
++ faceted plots report one entry per panel with its key, row count and the
+  limits the panel would use (global for shared scales, per-panel for free
+  scales)
++ warnings raised while building are collected in `warnings` and muffled; print
+  and build share `bb_prepare_plot()`, so the built limits are the drawn limits
+
+## bb_save()
+
++ `bb_save()` opens the device implied by the extension (`pdf`, `png`,
+  `jpeg`/`jpg`, `tiff`/`tif`, `svg`) or an explicit device name/function,
+  draws the plot and closes only the device it opened
++ `width`/`height` with `units` (`in`, `cm`, `mm`, `px`) and `res` for raster
+  devices; the caller's active device is restored even with several devices open
++ an existing file requires `overwrite = TRUE`; a missing directory, a device
++ conflicting with the extension and invalid sizes are clear errors
++ drawing goes to a temporary file next to the target and the file is
+  moved into place only after success; on failure the temporary file is
+  removed, the original error is kept, the caller's device is restored
+  and an existing target is left untouched even with `overwrite = TRUE`
+
+## Extension API
+
++ a component that adds layers now has those layers marked, so a faceted plot
+  re-runs the component per panel without drawing the generated layers twice
++ the raw function/formula/expression escape hatch is reported by `bb_build()`
+  as `kind = "function"` (no mapping, data inheritance, scale or range)
++ `bb_build()` validates `nrow`/`ncol` and the layout capacity like the printer,
+  and requires plot data for a faceted build
++ `bbplot_add()` is documented as the public contract for a new component class:
+  a method returns the modified plot, adds through public constructors such as
+  `bb_layer()`, and must not draw directly or touch internal helpers; packages
+  register the method with `S3method()`
++ the vignette has an "Extending from a package" section comparing the escape
+  hatch, `bb_layer()` and `bbplot_add()`, with an example that uses only public
+  API and is covered by the facet/order/state rules
+
+## Decisions recorded
+
++ `notes/0.5.0-decisions.md` records the decisions on a per-layer legend, free
++ colour scales by facet, `bb_facet_grid()` and the remaining colour-bar polish;
++ those features are not implemented in this release
+
+## Tests and documentation
+
++ new `test-build-save.R` covers build fields, side-effect freedom, repeated
+  builds, facet panel limits, collected warnings, pdf/png output, overwrite and
+  directory rules, device conflicts, device restoration and failure cleanup
++ the vignette has an "Inspecting and saving a plot" section
+
 # plotbb 0.4.0
 
 This release adds the high-frequency scientific layers and keeps them inside

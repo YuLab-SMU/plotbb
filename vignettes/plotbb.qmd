@@ -803,6 +803,67 @@ A third-party package can add its own component type by implementing
 `bbplot_add()` for its class; the method receives the object and the plot and
 must return the plot.
 
+## Extending from a package
+
+There are three levels at which code outside plotbb can join the grammar, and
+they differ in how much of the grammar they get:
+
+* **function / formula / expression** added with `+` is the raw base-graphics
+  escape hatch. It draws in order and shares the graphics-state contract, but it
+  is not validated, does not contribute to ranges and is not part of the scale
+  or facet machinery. Use it for one-off additions.
+* **`bb_layer()`** is the stable custom-layer entry point. It inherits data and
+  mapping, honours constants, draws at print time in `+` order, follows the
+  facets, contributes its mapped `x`/`y` (and any declared `limits`) to the
+  ranges, and propagates errors unchanged. It does not extend the scales or the
+  legend.
+* **`bbplot_add()`** lets a package define a new *kind of component*. A method
+  receives the object and the plot, returns the modified plot, and should
+  describe what to add rather than draw it — typically by calling the public
+  `bb_layer()`. It must not draw directly, change the device or rely on internal
+  helpers such as `build_layer()`; those are not part of the contract.
+  Functions, formulas and expressions are fine as an escape hatch, but a
+  package should register its component method with
+  `S3method(bbplot_add, <class>)` in `NAMESPACE`.
+
+```{r plotbb-third-party}
+bb_threshold <- function(value) {
+  structure(list(value = value), class = "bb_threshold")
+}
+
+bbplot_add.bb_threshold <- function(object, plot) {
+  plot + bb_layer(function(x, y, ...) {
+    graphics::abline(h = object$value, lty = 2, col = "firebrick")
+  })
+}
+
+p + bb_point(pch = 19) + bb_threshold(300)
+```
+
+The component is re-applied inside every facet panel, takes part in the `+`
+order and is covered by the same graphics-state restoration as the built-in
+components; the layer the method adds is not added a second time when a panel is
+rebuilt. The custom drawing itself still follows the `bb_layer()` limits:
+mapped coordinates count towards the ranges, coordinates it computes itself do
+not unless declared with `limits`.
+
+## Combining complete plots
+
+`+` adds layers and components to **one** plot; it deliberately refuses a second
+complete plot. Arranging several complete plots is a different operation and is
+delegated to `aplot::plot_list()` from the same author's aplot package (aplot
+has `plot_list()`, not `plot_grid()`):
+
+```{r plotbb-aplot, eval=FALSE}
+p1 <- bbplot(mtcars, bb_aes(mpg, disp)) + bb_point()
+p2 <- bbplot(mtcars, bb_aes(hp, wt)) + bb_point(col = "firebrick")
+aplot::plot_list(p1, p2)
+```
+
+This is not the same as `bb_facet_wrap()` or `bb_facet_grid()`: those split one
+plot into panels, while `aplot::plot_list()` arranges separate plots. plotbb
+keeps the two operations separate.
+
 ## A complete workflow
 
 Putting the rules together: data, inherited mapping, a layer with its own data,
@@ -833,6 +894,58 @@ bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl))) +
   bb_labs(title = "mtcars", xlab = "miles per gallon", ylab = "displacement") +
   bb_theme_minimal()
 ```
+
+## Inspecting and saving a plot
+
+A plot object can be inspected without drawing it. `bb_build()` performs the
+same computation the printer does — training the scales, resolving the
+mappings, collecting the data and computing the limits — and returns a plain
+list. It opens no device, changes no `par()` and does not touch the random
+seed, so it is safe in tests and in batch code that only wants to check a plot
+before rendering it.
+
+```{r plotbb-build}
+built <- bb_build(
+  p + bb_point(pch = 19) +
+    bb_scale_col_manual(c(`4` = "#1b9e77", `6` = "#d95f02", `8` = "#7570b3"))
+)
+names(built)
+built$limits
+built$layers[[1]]$name
+built$scales$col$domain
+```
+
+Faceted plots report one entry per panel, with the limits that panel would use.
+This is also where build and print are guaranteed to agree: both go through
+`bb_prepare_plot()`, so the limits in the build result are the limits the
+printer uses.
+
+```{r plotbb-build-facet}
+facet_built <- bb_build(
+  p + bb_point() + bb_facet_wrap(~am, ncol = 2, scales = "free_y")
+)
+vapply(facet_built$panels, `[[`, "", "key")
+facet_built$panels[[1]]$ylim
+```
+
+`bb_save()` writes a plot to a file. The device comes from the extension
+(`pdf`, `png`, `jpeg`/`jpg`, `tiff`/`tif`, `svg`) or from an explicit `device`;
+sizes are given with `units`, and raster devices take `res`. It closes only the
+device it opened and restores the caller's active device, so it can be used
+inside an existing graphics session.
+
+```{r plotbb-save}
+out <- tempfile(fileext = ".pdf")
+bb_save(p + bb_point(pch = 19), out, width = 6, height = 4)
+file.exists(out)
+unlink(out)
+```
+
+An existing file is never overwritten unless `overwrite = TRUE`; a missing
+directory, a device that conflicts with the extension and invalid sizes are
+errors. On failure the temporary file is removed, the original error is kept,
+the caller's device is restored and an existing target is left untouched (even
+with `overwrite = TRUE`).
 
 ## The contract at a glance
 
@@ -942,6 +1055,12 @@ trained by a scale:
 | `bb_lm()` | `col`, `lty` |
 | `bb_signif()` | none (constant `col` only) |
 | `bb_layer()` | whatever the drawing function accepts (`col`, `fill`, `pch`, `lty`, `cex`, `label` are resolved) |
+
+Workflow: `bb_build()` inspects a plot without drawing it; `bb_save()` writes
+it to a device and restores the caller's device afterwards.
+
+Extension: `bb_layer()` adds a drawing function inside the grammar;
+`bbplot_add()` adds a new component class (register the S3 method in a package).
 
 Components: `bb_facet_wrap()`, `bb_legend()`, `bb_labs()` (and `bb_title()`,
 `bb_sub()`, `bb_xlab()`, `bb_ylab()`), `bb_theme()` with the presets
