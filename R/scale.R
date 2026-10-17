@@ -20,24 +20,28 @@
 ##'   `pretty()` on the trained domain.
 ##' @param labels optional labels for the breaks (continuous) or a named vector
 ##'   renaming discrete levels.
+##' @param minor_breaks optional positions for minor ticks on a continuous colour
+##'   bar; `NULL` uses the midpoints between the major breaks.
 ##' @return A modified bbplot object
 ##' @export
 ##' @author Guangchuang Yu
 bb_scale_col_palette <- function(palette = NULL, limits = NULL,
                                  na.value = "grey50", drop = TRUE,
-                                 breaks = NULL, labels = NULL) {
+                                 breaks = NULL, labels = NULL,
+                                 minor_breaks = NULL) {
     bb_colour_scale("col", "palette", palette = palette, limits = limits,
                     na.value = na.value, drop = drop, breaks = breaks,
-                    labels = labels)
+                    labels = labels, minor_breaks = minor_breaks)
 }
 
 ##' @rdname bb-scale
 ##' @export
 bb_scale_col_manual <- function(values, limits = NULL, na.value = "grey50",
-                                drop = TRUE, breaks = NULL, labels = NULL) {
+                                drop = TRUE, breaks = NULL, labels = NULL,
+                                minor_breaks = NULL) {
     bb_colour_scale("col", "manual", palette = values, limits = limits,
                     na.value = na.value, drop = drop, breaks = breaks,
-                    labels = labels)
+                    labels = labels, minor_breaks = minor_breaks)
 }
 
 ##' @rdname bb-scale
@@ -45,10 +49,12 @@ bb_scale_col_manual <- function(values, limits = NULL, na.value = "grey50",
 bb_scale_col_gradient <- function(low = "#132B43", high = "#56B1F7",
                                   limits = NULL, na.value = "grey50",
                                   oob = c("squish", "censor"),
-                                  breaks = NULL, labels = NULL) {
+                                  breaks = NULL, labels = NULL,
+                                  minor_breaks = NULL) {
     bb_colour_scale("col", "gradient", palette = c(low, high),
                     limits = limits, na.value = na.value,
-                    oob = match.arg(oob), breaks = breaks, labels = labels)
+                    oob = match.arg(oob), breaks = breaks, labels = labels,
+                    minor_breaks = minor_breaks)
 }
 
 ##' Fill scales
@@ -63,19 +69,21 @@ bb_scale_col_gradient <- function(low = "#132B43", high = "#56B1F7",
 ##' @export
 bb_scale_fill_palette <- function(palette = NULL, limits = NULL,
                                   na.value = "grey50", drop = TRUE,
-                                  breaks = NULL, labels = NULL) {
+                                  breaks = NULL, labels = NULL,
+                                  minor_breaks = NULL) {
     bb_colour_scale("fill", "palette", palette = palette, limits = limits,
                     na.value = na.value, drop = drop, breaks = breaks,
-                    labels = labels)
+                    labels = labels, minor_breaks = minor_breaks)
 }
 
 ##' @rdname bb-scale-fill
 ##' @export
 bb_scale_fill_manual <- function(values, limits = NULL, na.value = "grey50",
-                                 drop = TRUE, breaks = NULL, labels = NULL) {
+                                 drop = TRUE, breaks = NULL, labels = NULL,
+                                 minor_breaks = NULL) {
     bb_colour_scale("fill", "manual", palette = values, limits = limits,
                     na.value = na.value, drop = drop, breaks = breaks,
-                    labels = labels)
+                    labels = labels, minor_breaks = minor_breaks)
 }
 
 ##' @rdname bb-scale-fill
@@ -83,15 +91,21 @@ bb_scale_fill_manual <- function(values, limits = NULL, na.value = "grey50",
 bb_scale_fill_gradient <- function(low = "#132B43", high = "#56B1F7",
                                    limits = NULL, na.value = "grey50",
                                    oob = c("squish", "censor"),
-                                   breaks = NULL, labels = NULL) {
+                                   breaks = NULL, labels = NULL,
+                                   minor_breaks = NULL) {
     bb_colour_scale("fill", "gradient", palette = c(low, high),
                     limits = limits, na.value = na.value,
-                    oob = match.arg(oob), breaks = breaks, labels = labels)
+                    oob = match.arg(oob), breaks = breaks, labels = labels,
+                    minor_breaks = minor_breaks)
 }
 
 bb_colour_scale <- function(aesthetic, type, palette = NULL, limits = NULL,
                             na.value = "grey50", drop = TRUE,
-                            oob = "squish", breaks = NULL, labels = NULL) {
+                            oob = "squish", breaks = NULL, labels = NULL,
+                            minor_breaks = NULL) {
+    if (!is.null(minor_breaks) && !is.numeric(minor_breaks)) {
+        bb_abort("`minor_breaks` must be numeric or NULL.")
+    }
     structure(
         list(
             aesthetic = aesthetic,
@@ -102,6 +116,7 @@ bb_colour_scale <- function(aesthetic, type, palette = NULL, limits = NULL,
             domain = NULL,
             breaks = breaks,
             labels = labels,
+            minor_breaks = minor_breaks,
             na.value = na.value,
             oob = oob,
             drop = isTRUE(drop)
@@ -484,14 +499,38 @@ bb_default_colour <- function(plot, x, palette = NULL) {
 ##' @param outside logical, whether to place the legend outside the plotting area.
 ##' @param orientation orientation of a continuous colour bar,
 ##'   \code{"vertical"} or \code{"horizontal"}.
+##' @param layer optional layer index or name: the legend then describes that
+##'   layer's mapping. The colour scale is still the shared one, so this selects
+##'   the mapping/title, not a separate domain.
+##' @param style \code{"auto"} or \code{"bar"}; a bar draws a discrete
+##'   col/fill legend as adjacent colour blocks (a discrete gradient).
+##' @param title_width optional positive integer; wraps a long legend title.
 ##' @param ... additional parameters passed to \code{graphics::legend}.
 ##' @return A modified bbplot object
 ##' @export
 ##' @author Guangchuang Yu
 bb_legend <- function(position = "topright", title = NULL, aesthetic = "col",
                       pch = 19, bty = "n", outside = FALSE,
-                      orientation = c("vertical", "horizontal"), ...) {
+                      orientation = c("vertical", "horizontal"),
+                      layer = NULL, style = c("auto", "bar"),
+                      title_width = NULL, ...) {
     orientation <- match.arg(orientation)
+    style <- match.arg(style)
+    if (!is.null(layer) &&
+        !(is.numeric(layer) && length(layer) == 1L) &&
+        !(is.character(layer) && length(layer) == 1L)) {
+        bb_abort("`layer` in `bb_legend()` must be a layer index, a layer ",
+                 "name or NULL.")
+    }
+    if (!is.null(title_width)) {
+        if (!is.numeric(title_width) || length(title_width) != 1L ||
+            is.na(title_width) || title_width < 1 ||
+            title_width != as.integer(title_width)) {
+            bb_abort("`title_width` in `bb_legend()` must be a positive ",
+                     "integer or NULL.")
+        }
+        title_width <- as.integer(title_width)
+    }
     structure(
         list(
             position = position,
@@ -501,6 +540,9 @@ bb_legend <- function(position = "topright", title = NULL, aesthetic = "col",
             bty = bty,
             outside = outside,
             orientation = orientation,
+            layer = layer,
+            style = style,
+            title_width = title_width,
             params = list(...)
         ),
         class = "bb_legend"
@@ -542,20 +584,64 @@ bb_legend_scale <- function(plot, aesthetic) {
     scale
 }
 
+## A per-layer legend selects the layer whose mapping the legend describes. The
+## scale is still the shared, plot-trained one; `layer` chooses the mapping,
+## data and default title, not a second domain.
+bb_legend_layer <- function(plot, layer, aesthetic) {
+    objects <- Filter(function(obj) inherits(obj, "bb_layer"), plot$adds)
+    if (!length(objects)) {
+        bb_abort("`bb_legend(layer = )` needs at least one layer.")
+    }
+    if (is.character(layer)) {
+        idx <- match(layer, names(plot$layer))
+    } else {
+        idx <- layer
+    }
+    if (is.na(idx) || !is.numeric(idx) || idx != as.integer(idx) ||
+        idx < 1L || idx > length(objects)) {
+        bb_abort("`layer` in `bb_legend()` must refer to an existing layer ",
+                 "(1 to ", length(objects), ").")
+    }
+    obj <- objects[[as.integer(idx)]]
+    mapping <- bb_layer_aesthetics(plot, obj$mapping,
+                                   obj$inherit %||% TRUE,
+                                   obj$params %||% list())
+    list(
+        mapping = mapping,
+        data = if (is.data.frame(obj$data)) obj$data else plot$data
+    )
+}
+
+bb_wrap_title <- function(title, width) {
+    if (is.null(title) || is.null(width)) return(title)
+    paste(strwrap(as.character(title), width = width), collapse = "\n")
+}
+
 bb_draw_legend <- function(object, plot) {
     aesthetic <- object$aesthetic %||% "col"
     if (!aesthetic %in% c("col", "fill", "pch", "lty", "cex")) {
         return(invisible(NULL))
     }
     data <- plot$data
+    mapping <- plot$mapping
+    if (!is.null(object$layer)) {
+        resolved <- bb_legend_layer(plot, object$layer, aesthetic)
+        data <- resolved$data
+        mapping <- resolved$mapping
+    }
     if (is.null(data)) return(invisible(NULL))
 
-    mapping <- plot$mapping
     map_aes <- aesthetic
     if (is.null(mapping[[map_aes]]) && identical(aesthetic, "fill")) {
         map_aes <- "col"
     }
-    if (is.null(mapping[[map_aes]])) return(invisible(NULL))
+    if (is.null(mapping[[map_aes]])) {
+        if (!is.null(object$layer)) {
+            bb_abort("the selected layer does not map the `", aesthetic,
+                     "` aesthetic.")
+        }
+        return(invisible(NULL))
+    }
 
     values <- eval_mapping(mapping, map_aes, data)
     if (is.null(values)) return(invisible(NULL))
@@ -569,6 +655,7 @@ bb_draw_legend <- function(object, plot) {
         map_aesthetic <- "col"
     }
     title <- object$title %||% rlang::as_label(mapping[[map_aes]])
+    title <- bb_wrap_title(title, object$title_width)
 
     continuous <- if (!is.null(scale)) {
         bb_scale_is_continuous(scale, list(values))
@@ -668,6 +755,14 @@ bb_draw_discrete_legend <- function(object, plot, scale, values,
     } else if (identical(aesthetic, "cex")) {
         args$pch <- object$pch
         args$pt.cex <- unname(mapped)
+    }
+    if (identical(object$style %||% "auto", "bar") &&
+        aesthetic %in% c("col", "fill")) {
+        args$fill <- unname(mapped)
+        args$border <- NA
+        args$col <- NULL
+        args$pch <- NULL
+        args$lty <- NULL
     }
     args <- c(args, object$params)
 
@@ -770,6 +865,26 @@ bb_draw_colourbar <- function(object, plot, scale, values, title) {
         at <- y0 + (breaks - domain[[1]]) / (domain[[2]] - domain[[1]]) * (y1 - y0)
         graphics::text(x1 + xspan * 0.01, at, labels %||% breaks,
                        cex = 0.8, adj = c(0, 0.5))
+    }
+
+    minor <- scale$minor_breaks
+    if (is.null(minor) && length(breaks) >= 2L) {
+        minor <- (utils::head(breaks, -1L) + utils::tail(breaks, -1L)) / 2
+    }
+    minor <- minor[is.finite(minor) & minor > domain[[1]] &
+                   minor < domain[[2]]]
+    if (length(minor)) {
+        if (identical(orientation, "horizontal")) {
+            at_minor <- x0 + (minor - domain[[1]]) /
+                (domain[[2]] - domain[[1]]) * (x1 - x0)
+            graphics::segments(at_minor, y0, at_minor, y0 - yspan * 0.012,
+                               col = "grey30")
+        } else {
+            at_minor <- y0 + (minor - domain[[1]]) /
+                (domain[[2]] - domain[[1]]) * (y1 - y0)
+            graphics::segments(x1, at_minor, x1 + xspan * 0.012, at_minor,
+                               col = "grey30")
+        }
     }
 
     if (identical(orientation, "horizontal")) {

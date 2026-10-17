@@ -12,6 +12,9 @@ bb_legend(
   bty = "n",
   outside = FALSE,
   orientation = c("vertical", "horizontal"),
+  layer = NULL,
+  style = c("auto", "bar"),
+  title_width = NULL,
   ...
 )
 }
@@ -31,6 +34,15 @@ numeric x position for an outside legend.}
 
 \item{orientation}{orientation of a continuous colour bar,
 \code{"vertical"} or \code{"horizontal"}.}
+
+\item{layer}{optional layer index or name: the legend then describes that
+layer's mapping. The colour scale is still the shared one, so this selects
+the mapping/title, not a separate domain.}
+
+\item{style}{\code{"auto"} or \code{"bar"}; a bar draws a discrete
+col/fill legend as adjacent colour blocks (a discrete gradient).}
+
+\item{title_width}{optional positive integer; wraps a long legend title.}
 
 \item{...}{additional parameters passed to \code{graphics::legend}.}
 }

@@ -11,7 +11,8 @@ bb_facet_wrap(
   scales = "fixed",
   labeller = NULL,
   drop = TRUE,
-  strip_width = NULL
+  strip_width = NULL,
+  free_colour = FALSE
 )
 }
 \arguments{
@@ -31,6 +32,10 @@ has no rows and falls back to the global limits, including on free scales.}
 
 \item{strip_width}{optional positive integer; wraps long strip labels with
 \code{strwrap()}.}
+
+\item{free_colour}{if TRUE, each panel trains its own col/fill domain from its
+rows (requires an explicit colour scale; an outside legend is then an
+error because it cannot describe several domains).}
 }
 \value{
 A modified bbplot object

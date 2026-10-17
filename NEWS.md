@@ -1,3 +1,42 @@
+# plotbb 0.8.0
+
+This release closes the legend and colour-scale backlog.
+
+## Per-layer legends
+
++ `bb_legend(layer = )` describes one layer's mapping (1-based index or layer
+  name) and uses its mapping label as the default title; the colours still come
+  from the shared trained scale, so this selects the explained mapping, not a
+  second domain
++ `style = "bar"` draws a discrete col/fill legend as adjacent colour blocks
++ `title_width` wraps a long legend title
+
+## Free colour scales by facet
+
++ `bb_facet_wrap(..., free_colour = TRUE)` and
+  `bb_facet_grid(..., free_colour = TRUE)` train the col/fill domain per panel
+  from that panel's rows, while every other aesthetic keeps the shared scale
++ this requires an explicit `bb_scale_col_*()`/`bb_scale_fill_*()` scale; the
+  default colour mapping is value-based and shared
++ an outside legend combined with `free_colour = TRUE` is an error, because one
+  legend cannot describe several domains; inside legends show the panel domain
++ `bb_build()` reports each panel's `col_domain`/`fill_domain` and the facet
+  summary records `free_colour`
+
+## Colour-bar polish
+
++ `minor_breaks` on the colour scales adds small ticks between the labelled
+  breaks of the colour bar; `NULL` uses the major-break midpoints
+
+## Tests and documentation
+
++ test-legends-0.8.R covers per-layer titles, invalid layer selection, bar
+  style, wrapped titles, minor ticks, free colour domains in wrap and grid, and
+  the outside-legend error
++ the vignette documents per-layer legends, free colour facets and minor breaks
++ known limits now state the explicit-scale requirement and the shared-scale
+  nature of a per-layer legend
+
 # plotbb 0.7.0
 
 This release adds the two remaining statistical layers: violin and smooth.

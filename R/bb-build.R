@@ -70,7 +70,8 @@ bb_build_facet <- function(facet) {
             rows = if (is.null(facet$rows)) NULL else
                 as.character(rlang::f_rhs(facet$rows)),
             cols = if (is.null(facet$cols)) NULL else
-                as.character(rlang::f_rhs(facet$cols))
+                as.character(rlang::f_rhs(facet$cols)),
+            free_colour = isTRUE(facet$free_colour)
         ))
     }
     list(
@@ -92,6 +93,8 @@ bb_build_panels_grid <- function(plot) {
             row_label = spec$row_label,
             col_label = spec$col_label,
             n = spec$n,
+            col_domain = spec$col_domain,
+            fill_domain = spec$fill_domain,
             xlim = spec$xlim,
             ylim = spec$ylim
         )
@@ -203,13 +206,27 @@ bb_build_panels <- function(plot) {
             panel <- panel + obj
         }
         panel <- bb_set_scales(panel, bb_get_scales(plot))
+        if (isTRUE(facet$free_colour) && !empty_panel) {
+            panel <- bb_facet_free_scales(panel, bb_get_scales(plot))
+        }
         panel <- bb_summary_labs(panel)
         lim <- bb_plot_limits(panel)
+        panel_scales <- bb_get_scales(panel)
 
         list(
             key = key,
             label = bb_facet_label(facet, key),
             n = sum(idx),
+            col_domain = if (!is.null(panel_scales$col)) {
+                panel_scales$col$domain
+            } else {
+                NULL
+            },
+            fill_domain = if (!is.null(panel_scales$fill)) {
+                panel_scales$fill$domain
+            } else {
+                NULL
+            },
             xlim = if (empty_panel || !scales %in% c("free", "free_x")) {
                 global$xlim
             } else {

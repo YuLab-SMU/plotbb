@@ -381,9 +381,12 @@ result in the scale. Two consequences matter in practice:
 * constants are removed from the mapping before training, so a constant colour
   never contributes a level to the scale or the legend.
 
-Facets train once on the full plot and share the resulting domain: the same
-value gets the same colour in every panel. Free colour scales per panel are not
-supported.
+Facets train once on the full plot and share the resulting domain by default:
+the same value gets the same colour in every panel. `free_colour = TRUE` opts
+into a per-panel col/fill domain (an explicit colour scale is required; the
+default mapping is value-based and therefore identical across panels). A free
+colour facet cannot use an outside legend, because one legend cannot describe
+several domains.
 
 ### Discrete scales
 
@@ -414,6 +417,7 @@ A continuous mapping interpolates between colours over a trained numeric domain.
 `limits` fixes the domain; `oob = "squish"` (the default) clamps values outside
 it, `oob = "censor"` maps them to `na.value`. A zero-width domain is widened by
 half a unit, and an all-missing domain leaves every value at `na.value`.
+`minor_breaks` adds small ticks between the labelled breaks of the colour bar.
 
 ```{r plotbb-scale-gradient}
 bbplot(mtcars, bb_aes(mpg, disp, col = hp)) +
@@ -488,10 +492,38 @@ draws it once for the whole figure.
 p + bb_point(pch = 19) + bb_legend(aesthetic = "col", outside = TRUE)
 ```
 
-The legend reads the plot's mapping and data. It describes the whole plot, not
-the last layer, so a layer with its own `col` mapping is still explained through
-the plot-level mapping and scale. A per-layer legend is not part of this
-release; the `lty` limitation listed at the end is.
+By default the legend describes the whole plot, through the plot-level mapping
+and the shared scale. `bb_legend(layer = )` selects one layer's mapping and uses
+its default title (`layer` is a 1-based index or a layer name); the colours
+still come from the shared scale, so this selects the explained mapping, not a
+second domain. `style = "bar"` turns a discrete col/fill legend into adjacent
+colour blocks, and `title_width` wraps a long title.
+
+```{r plotbb-legend-layer}
+layer_data <- data.frame(
+  x = 1:6, y = 1:6,
+  g = factor(rep(c("a", "b"), 3)),
+  h = factor(rep(c("u", "v", "w"), each = 2))
+)
+bbplot(layer_data, bb_aes(x, y, col = h)) +
+  bb_point() +
+  bb_line(bb_aes(col = g)) +
+  bb_legend(layer = 2, title = "line grouping")
+```
+
+Free colour facets are an opt-in, not the default:
+
+```{r plotbb-free-colour}
+free_data <- data.frame(
+  x = 1:6, y = 1:6,
+  panel = rep(c("a", "b"), each = 3),
+  g = factor(c("u", "v", "u", "v", "w", "w"))
+)
+bbplot(free_data, bb_aes(x, y, col = g)) +
+  bb_point() +
+  bb_scale_col_manual(c(u = "red", v = "blue", w = "green")) +
+  bb_facet_wrap(~panel, ncol = 2, free_colour = TRUE)
+```
 
 ## Facets
 
@@ -1157,6 +1189,8 @@ Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
   legend.
 * `+` combines components of one plot; for several plots use
   `aplot::plot_list()`.
-* Planned for later releases and therefore **not** part of this grammar:
-  a per-layer legend and the colour-bar polish (minor ticks, a discrete
-  gradient legend, long-title wrapping).
+* `free_colour = TRUE` requires an explicit `bb_scale_col_*()`/`bb_scale_fill_*()`
+  scale and cannot be combined with an outside legend. Without an explicit scale
+  the default colour mapping is value-based and shared across panels.
+* A per-layer legend selects the mapping/title of one layer but still uses the
+  shared trained scale; it is not a second colour domain.

@@ -10,7 +10,8 @@ bb_facet_grid(
   scales = "fixed",
   labeller = NULL,
   drop = TRUE,
-  strip_width = NULL
+  strip_width = NULL,
+  free_colour = FALSE
 )
 }
 \arguments{
@@ -27,6 +28,10 @@ within a row, matching the grid layout.}
 \item{drop}{if FALSE, unused factor levels still get panels.}
 
 \item{strip_width}{optional positive integer; wraps long strip labels.}
+
+\item{free_colour}{if TRUE, each panel trains its own col/fill domain from its
+rows (requires an explicit colour scale; an outside legend is then an
+error because it cannot describe several domains).}
 }
 \value{
 A modified bbplot object

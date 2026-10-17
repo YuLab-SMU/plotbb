@@ -120,6 +120,11 @@ bb_print_facet <- function(x) {
 
     adds <- x$adds
     outside_legends <- Filter(function(obj) inherits(obj, "bb_legend") && isTRUE(obj$outside), adds)
+    if (isTRUE(facet$free_colour) && length(outside_legends)) {
+        bb_abort("`free_colour = TRUE` cannot be combined with an outside ",
+                 "legend: each panel has its own colour domain. Use an inside ",
+                 "legend or keep the shared colour scale.")
+    }
     if (length(outside_legends)) {
         panel_layout <- matrix(seq_len(nrow * ncol), nrow = nrow, ncol = ncol, byrow = TRUE)
         legend_idx <- max(panel_layout) + 1
@@ -196,8 +201,12 @@ bb_print_facet <- function(x) {
             }
         }
         ## Re-adding the scale components above resets their domains; restore
-        ## the domains trained on the full data so all panels agree.
+        ## the domains trained on the full data so all panels agree, unless the
+        ## facet opts into per-panel colour domains.
         p <- bb_set_scales(p, bb_get_scales(x))
+        if (isTRUE(facet$free_colour) && !empty_panel) {
+            p <- bb_facet_free_scales(p, bb_get_scales(x))
+        }
         p <- bb_summary_labs(p)
 
         if (identical(scales, "fixed") || empty_panel) {
@@ -312,6 +321,9 @@ bb_facet_layer_data <- function(layer_data, facet, panel, idx, n_plot) {
 ##'   has no rows and falls back to the global limits, including on free scales.
 ##' @param strip_width optional positive integer; wraps long strip labels with
 ##'   \code{strwrap()}.
+##' @param free_colour if TRUE, each panel trains its own col/fill domain from its
+##'   rows (requires an explicit colour scale; an outside legend is then an
+##'   error because it cannot describe several domains).
 ##' @details \code{nrow} and \code{ncol} must be positive integers, and their
 ##' product must be at least the number of panels; a layout that is too small is
 ##' reported instead of silently overwriting a panel. By default facets are built
@@ -321,7 +333,8 @@ bb_facet_layer_data <- function(layer_data, facet, panel, idx, n_plot) {
 ##' @export
 ##' @author Guangchuang Yu
 bb_facet_wrap <- function(facets, ncol = NULL, nrow = NULL, scales = "fixed",
-                          labeller = NULL, drop = TRUE, strip_width = NULL) {
+                          labeller = NULL, drop = TRUE, strip_width = NULL,
+                          free_colour = FALSE) {
     stopifnot(inherits(facets, "formula"))
     scales <- match.arg(scales, c("fixed", "free", "free_x", "free_y"))
     if (!is.null(labeller) && !is.function(labeller)) {
@@ -339,6 +352,10 @@ bb_facet_wrap <- function(facets, ncol = NULL, nrow = NULL, scales = "fixed",
         }
         strip_width <- as.integer(strip_width)
     }
+    if (!is.logical(free_colour) || length(free_colour) != 1L ||
+        is.na(free_colour)) {
+        bb_abort("`free_colour` in `bb_facet_wrap()` must be TRUE or FALSE.")
+    }
     structure(
         list(
             facets = facets,
@@ -347,10 +364,23 @@ bb_facet_wrap <- function(facets, ncol = NULL, nrow = NULL, scales = "fixed",
             scales = scales,
             labeller = labeller,
             drop = drop,
-            strip_width = strip_width
+            strip_width = strip_width,
+            free_colour = free_colour
         ),
         class = "bb_facet_wrap"
     )
+}
+
+## A panel with its own col/fill domains, while every other aesthetic keeps the
+## globally trained scale. Only meaningful when an explicit colour scale exists:
+## the default colour mapping is value-based and identical across panels.
+bb_facet_free_scales <- function(panel, global) {
+    panel <- bb_train_scales(panel)
+    panel_scales <- bb_get_scales(panel)
+    for (a in setdiff(names(global), c("col", "fill"))) {
+        panel_scales[[a]] <- global[[a]]
+    }
+    bb_set_scales(panel, panel_scales)
 }
 
 bb_facet_levels <- function(facet, values) {

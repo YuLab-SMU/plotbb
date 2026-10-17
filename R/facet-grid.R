@@ -9,6 +9,9 @@
 ##' @param labeller optional function applied to each row/column key.
 ##' @param drop if FALSE, unused factor levels still get panels.
 ##' @param strip_width optional positive integer; wraps long strip labels.
+##' @param free_colour if TRUE, each panel trains its own col/fill domain from its
+##'   rows (requires an explicit colour scale; an outside legend is then an
+##'   error because it cannot describe several domains).
 ##' @details At least one of \code{rows} and \code{cols} is required. Panels are
 ##'   the full combination of the row and column keys; a combination without
 ##'   rows is drawn empty rather than skipped. Row labels are placed at the
@@ -18,7 +21,8 @@
 ##' @export
 ##' @author Guangchuang Yu
 bb_facet_grid <- function(rows = NULL, cols = NULL, scales = "fixed",
-                          labeller = NULL, drop = TRUE, strip_width = NULL) {
+                          labeller = NULL, drop = TRUE, strip_width = NULL,
+                          free_colour = FALSE) {
     if (is.null(rows) && is.null(cols)) {
         bb_abort("`bb_facet_grid()` needs at least one of `rows` and `cols`.")
     }
@@ -45,6 +49,10 @@ bb_facet_grid <- function(rows = NULL, cols = NULL, scales = "fixed",
         }
         strip_width <- as.integer(strip_width)
     }
+    if (!is.logical(free_colour) || length(free_colour) != 1L ||
+        is.na(free_colour)) {
+        bb_abort("`free_colour` in `bb_facet_grid()` must be TRUE or FALSE.")
+    }
     structure(
         list(
             rows = rows,
@@ -52,7 +60,8 @@ bb_facet_grid <- function(rows = NULL, cols = NULL, scales = "fixed",
             scales = scales,
             labeller = labeller,
             drop = drop,
-            strip_width = strip_width
+            strip_width = strip_width,
+            free_colour = free_colour
         ),
         class = "bb_facet_grid"
     )
@@ -163,7 +172,11 @@ bb_grid_specs <- function(plot) {
                 }
             }
             panel <- bb_set_scales(panel, bb_get_scales(plot))
+            if (isTRUE(facet$free_colour) && !empty_panel) {
+                panel <- bb_facet_free_scales(panel, bb_get_scales(plot))
+            }
             panel <- bb_summary_labs(panel)
+            panel_scales <- bb_get_scales(panel)
             lim <- if (empty_panel) NULL else bb_plot_limits(panel)
             specs[[k]] <- list(
                 i = i, j = j,
@@ -175,6 +188,16 @@ bb_grid_specs <- function(plot) {
                     bb_facet_label(facet, col_lev[j]),
                 data = panel_data, idx = idx,
                 n = sum(idx), empty = empty_panel,
+                col_domain = if (!is.null(panel_scales$col)) {
+                    panel_scales$col$domain
+                } else {
+                    NULL
+                },
+                fill_domain = if (!is.null(panel_scales$fill)) {
+                    panel_scales$fill$domain
+                } else {
+                    NULL
+                },
                 plot = panel, lim = lim
             )
         }
@@ -233,6 +256,11 @@ bb_print_facet_grid <- function(x) {
         function(obj) inherits(obj, "bb_legend") && isTRUE(obj$outside),
         adds
     )
+    if (isTRUE(facet$free_colour) && length(outside_legends)) {
+        bb_abort("`free_colour = TRUE` cannot be combined with an outside ",
+                 "legend: each panel has its own colour domain. Use an inside ",
+                 "legend or keep the shared colour scale.")
+    }
 
     global_main <- x$labs$main
     global_sub <- x$labs$sub

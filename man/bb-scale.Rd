@@ -12,7 +12,8 @@ bb_scale_col_palette(
   na.value = "grey50",
   drop = TRUE,
   breaks = NULL,
-  labels = NULL
+  labels = NULL,
+  minor_breaks = NULL
 )
 
 bb_scale_col_manual(
@@ -21,7 +22,8 @@ bb_scale_col_manual(
   na.value = "grey50",
   drop = TRUE,
   breaks = NULL,
-  labels = NULL
+  labels = NULL,
+  minor_breaks = NULL
 )
 
 bb_scale_col_gradient(
@@ -31,7 +33,8 @@ bb_scale_col_gradient(
   na.value = "grey50",
   oob = c("squish", "censor"),
   breaks = NULL,
-  labels = NULL
+  labels = NULL,
+  minor_breaks = NULL
 )
 }
 \arguments{
@@ -51,6 +54,9 @@ scale and the legend.}
 
 \item{labels}{optional labels for the breaks (continuous) or a named vector
 renaming discrete levels.}
+
+\item{minor_breaks}{optional positions for minor ticks on a continuous colour
+bar; `NULL` uses the midpoints between the major breaks.}
 
 \item{values}{colors for discrete scale.}
 
