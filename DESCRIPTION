@@ -6,7 +6,7 @@ Authors@R: person("Guangchuang", "Yu", email = "guangchuangyu@gmail.com",
 Description: Implements a grammar of graphics on top of the 'base' graphics
   system. A 'bbplot' object is built incrementally with a '+' operator from
   data, aesthetic mappings and layers, then rendered with base graphics, so
-  plotbb layers can be mixed with ordinary base plotting calls. The package
+  the layers can be mixed with ordinary base plotting calls. The package
   provides layers for points, lines, bars, histograms, densities, boxplots,
   violins, ribbons, smooths, error bars and tiles, together with colour and
   other aesthetic scales, automatic legends, faceting, themes, coordinate
