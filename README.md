@@ -1,15 +1,16 @@
-# plotbb: Grammar of Graphics for base plot
+# plotbb: Grammar of Graphics on ‘base’ Graphics
 
 
 <!-- README.md is generated from README.qmd. Please edit that file -->
 
-A grammar of graphics framework built on ‘base’ graphics. It provides a
-‘bbplot’ object and a ‘+’ operator to incrementally compose plots from
-data, aesthetic mappings and layers, then render them using the base
-plotting system. The package includes common geometric layers (points,
-lines, segments, bars, histograms, boxplots and tiles), scales for color
-and other aesthetics, legends, faceting, themes, and significance
-annotations.
+Implements a grammar of graphics on top of the ‘base’ graphics system. A
+‘bbplot’ object is built incrementally with a ‘+’ operator from data,
+aesthetic mappings and layers, then rendered with base graphics, so
+plotbb layers can be mixed with ordinary base plotting calls. The
+package provides layers for points, lines, bars, histograms, densities,
+boxplots, violins, ribbons, smooths, error bars and tiles, together with
+colour and other aesthetic scales, automatic legends, faceting, themes,
+coordinate flipping and significance annotations.
 
 ## :writing_hand: Author
 

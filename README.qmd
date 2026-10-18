@@ -1,6 +1,6 @@
 
 ---
-title: "plotbb: Grammar of Graphics for base plot"
+title: "plotbb: Grammar of Graphics on 'base' Graphics"
 format: gfm
 ---
 
