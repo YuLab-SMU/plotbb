@@ -15,12 +15,12 @@ Depends:
   R (>= 4.1.0)
 Imports:
   graphics,
+  stats,
   rlang,
   scales,
   methods,
   utils
 Suggests:
-  stats,
   ape,
   aplot (>= 0.0.8),
   dplyr,

@@ -6,6 +6,7 @@
 + tests cover horizontal statistics, flipped formulas and their ranges
 + `bb_lm()` follows the shared grouping rule: an explicit `group`, then a discrete `x`, then `col`, then `fill`
 + `free_colour = TRUE` now fails clearly without an explicit colour scale instead of silently sharing one
++ grouped histograms align the plotted values with the group vector after dropping non-finite rows, fixing R-devel warnings
 + examples use the native `|>` pipe; `magrittr` is no longer a dependency
 
 # plotbb 0.9.0

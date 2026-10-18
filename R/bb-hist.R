@@ -100,8 +100,11 @@ ly_hist <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
 
         ## Discrete x values are group labels; draw comparable histograms
         ## within each group. Align group and colour values using the same
-        ## finite rows as the numeric observations.
+        ## finite rows as the numeric observations. `x` must be filtered too:
+        ## indexing it with the shorter `group` vector is a recycling error in
+        ## current R and a silent misalignment in older versions.
         group <- group[keep_finite]
+        x <- x[keep_finite]
         levels <- bb_discrete_levels(group)
         if (!length(levels)) return(invisible(NULL))
         breaks <- args$breaks %||% "Sturges"
