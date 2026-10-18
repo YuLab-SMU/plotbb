@@ -1259,7 +1259,6 @@ The error messages are written to point back at a rule. A short map:
 | `bb_lm()` | `x`, `y`, optional `group` | `se`, `level` |
 | `bb_signif()` | `comparisons`, or `xmin`/`xmax`/`y_position` | extends the y range |
 | `bb_layer()` | a drawing function | your own layer; `limits` declares extra range, `range` declares computed summary ranges |
-| `bb_grid()` | — | `bg = TRUE` draws behind the data |
 
 Each layer maps a defined set of aesthetics. Aesthetics outside this table can
 still be passed as constants (they go straight to the base function) but are not
@@ -1297,8 +1296,9 @@ Position: `bb_scale_x_continuous()`, `bb_scale_y_continuous()`,
 `bb_scale_x_log10()`, `bb_scale_y_log10()`, `bb_scale_x_date()`,
 `bb_scale_y_date()`, `bb_coord_flip()`.
 
-Components: `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`, `bb_labs()`
-(and `bb_title()`,`bb_sub()`, `bb_xlab()`, `bb_ylab()`), `bb_theme()` with the presets
+Components: `bb_grid()`, `bb_facet_wrap()`, `bb_facet_grid()`, `bb_legend()`,
+`bb_labs()` (and `bb_title()`, `bb_sub()`, `bb_xlab()`, `bb_ylab()`), `bb_theme()`
+with the presets
 `bb_theme_expand()`, `bb_theme_grey()`, `bb_theme_deepblue()`,
 `bb_theme_bw()`, `bb_theme_minimal()`, and the scales `bb_scale_col_palette()`,
 `bb_scale_col_manual()`, `bb_scale_col_gradient()`, `bb_scale_fill_palette()`,
