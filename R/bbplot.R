@@ -1,6 +1,6 @@
 ##' bbplot 
 ##'
-##' a proof of concept for grammar of graphics based on base plot.
+##' a grammar of graphics built on base graphics.
 ##' The bbplot class contains data (input data), mapping (aesthetic mapping),
 ##' layer (a list of plot layers), theme (theme setting) and
 ##' labs (label setting, including title, subtitle, x and y labels).

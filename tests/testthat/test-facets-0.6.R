@@ -129,3 +129,28 @@ test_that("facet_grid works with an outside legend", {
         bb_legend(position = "right", outside = TRUE)
     with_test_pdf(expect_silent(print(p)))
 })
+
+test_that("bb_build records free_colour for a wrap facet", {
+    d <- data.frame(x = 1:4, y = 1:4, f = c("a", "a", "b", "b"),
+                    g = c("u", "v", "u", "v"))
+    p <- bbplot(d, bb_aes(x, y, col = g)) + bb_point() +
+        bb_scale_col_manual(c(u = "red", v = "blue")) +
+        bb_facet_wrap(~f, free_colour = TRUE)
+    expect_true(bb_build(p)$facet$free_colour)
+})
+
+test_that("bb_build reports a clear error for a data-less grid facet", {
+    p <- as.bbplot(function() plot(1)) + bb_facet_grid(rows = ~x)
+    expect_error(bb_build(p), "requires plot data")
+})
+
+test_that("bb_build warns independently on each call", {
+    d <- data.frame(x = 1:6, y = 1:6, f = rep(c("a", "b"), each = 3))
+    layer <- data.frame(x = 1:2, y = 1:2)
+    p <- bbplot(d, bb_aes(x, y)) + bb_point() +
+        bb_point(data = layer) + bb_facet_wrap(~f)
+    first <- bb_build(p)$warnings
+    second <- bb_build(p)$warnings
+    expect_true(any(grepl("facet variable", first, fixed = TRUE)))
+    expect_equal(first, second)
+})

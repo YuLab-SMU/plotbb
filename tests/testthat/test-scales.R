@@ -467,3 +467,23 @@ test_that("facets share one trained domain", {
     expect_equal(scales_of(p)$col$domain, c(1, 300))
     with_test_pdf(expect_silent(print(p + bb_legend())))
 })
+
+test_that("bb_lm groups by a mapped col when no group is given", {
+    rec <- new.env()
+    rec$cols <- character()
+    options(plotbb.test.rec = rec)
+    trace(graphics::segments,
+          tracer = quote({
+              r <- getOption("plotbb.test.rec")
+              r$cols <- c(r$cols, col)
+          }), print = FALSE)
+    on.exit({
+        untrace(graphics::segments)
+        options(plotbb.test.rec = NULL)
+    }, add = TRUE)
+
+    p <- bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl))) +
+        bb_lm(se = FALSE)
+    with_test_pdf(print(p))
+    expect_gte(length(unique(rec$cols)), 3L)
+})

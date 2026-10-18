@@ -378,3 +378,12 @@ test_that("facet layout rejects invalid nrow/ncol", {
                      "positive integer")
     )
 })
+
+test_that("a summary layer does not inherit the plot-level canvas range", {
+    d <- data.frame(x = c("a", "b", "a"))
+    p <- bbplot(mtcars, bb_aes(mpg, disp)) +
+        bb_bar(bb_aes(x), data = d, stat = "count")
+    built <- bb_build(p)
+    expect_lt(max(built$limits$xlim), 10)
+    expect_lt(max(built$limits$ylim), 10)
+})

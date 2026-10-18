@@ -1256,7 +1256,7 @@ The error messages are written to point back at a rule. A short map:
 | `bb_smooth()` | `x`, `y`, optional `group` | explicit `method`/`formula`; `se`, `level`; `orientation` |
 | `bb_hline()` | `yintercept` or a `yintercept` mapping | no range change unless `expand_limits = TRUE` |
 | `bb_vline()` | `xintercept` or a `xintercept` mapping | no range change unless `expand_limits = TRUE` |
-| `bb_lm()` | `x`, `y`, optional `group` | `se`, `level` |
+| `bb_lm()` | `x`, `y`, optional `group` | `se`, `level`; a mapped `col`/`fill` also groups the fits |
 | `bb_signif()` | `comparisons`, or `xmin`/`xmax`/`y_position` | extends the y range |
 | `bb_layer()` | a drawing function | your own layer; `limits` declares extra range, `range` declares computed summary ranges |
 
@@ -1331,12 +1331,19 @@ with the presets
   `y`; horizontal fits are written `x ~ y` and converted internally. Transform
   the data or mapping rather than changing the response, so the band stays on
   the drawn scale.
+* `bb_lm()` groups its fits by an explicit `group`, then a discrete `x`, then
+  `col`, then `fill`. A constant `col` suppresses that grouping; use
+  `inherit = FALSE` with an explicit `x`/`y` mapping for one overall fit on a
+  plot whose points are coloured.
 * A mapped `col`/`lty` on `bb_line()` applies one value to the whole polyline; a
   polyline cannot change colour halfway. Add a `group` mapping to draw one line
   per group.
 * `bb_coord_flip()` flips point/line/text/segment/tile/custom layers,
   violin/boxplot/bar/errorbar/ribbon/density/histogram/smooth (toggling their
   orientation) and hline/vline; `bb_lm()` and `bb_signif()` are not flipped.
+* A `Date` column is drawn on a numeric axis unless `bb_scale_x_date()` or
+  `bb_scale_y_date()` is added; the positional date scale supplies the date
+  axis and its format.
 * `bb_bar(orientation = "horizontal")` uses categories on `x` for counts and
   numeric values on `x` / categories on `y` for identity bars; horizontal
   identity bars do not aggregate duplicate categories.

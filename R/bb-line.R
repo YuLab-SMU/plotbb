@@ -39,6 +39,13 @@ ly_line <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
 
         if (!is.null(group)) {
             group <- rep(group, length.out = prepared$n)[keep]
+            valid_group <- !is.na(group)
+            if (!any(valid_group)) return(invisible(NULL))
+            group <- group[valid_group]
+            x <- x[valid_group]
+            y <- y[valid_group]
+            if (!is.null(col_vec)) col_vec <- col_vec[valid_group]
+            if (!is.null(lty_vec)) lty_vec <- lty_vec[valid_group]
             ug <- unique(group)
             cols <- NULL
             ltypes <- NULL

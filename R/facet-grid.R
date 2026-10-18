@@ -127,6 +127,10 @@ bb_grid_layer_data <- function(layer_data, plot, facet, row_expr, col_expr,
 bb_grid_specs <- function(plot) {
     facet <- plot$facet
     data <- plot$data
+    if (is.null(data)) {
+        bb_abort("`bb_facet_grid()` requires plot data; cannot build panels ",
+                 "without it.")
+    }
     row_expr <- if (!is.null(facet$rows)) rlang::f_rhs(facet$rows) else NULL
     col_expr <- if (!is.null(facet$cols)) rlang::f_rhs(facet$cols) else NULL
     row_val <- if (is.null(row_expr)) rep("all", nrow(data)) else

@@ -74,9 +74,10 @@ the built-in layers, and its `data` follows the `bb_facet_wrap()` panels.
 Coordinates that the drawing function computes itself (a smooth curve, a
 confidence band, a reference line) do not widen the axes on their own; pass
 them explicitly in `limits`, or supply a `range` function for a statistical
-layer. The scales and the legend are not extended automatically: if the
-custom drawing needs a different scale, use the public scale constructors or
-start from a canvas created by \code{as.bbplot()}.
+layer. Mapped aesthetics (`col`, `fill`, `pch`, `lty`, `cex`) use the shared
+scale and the automatic legend; a custom layer cannot define a new scale or
+legend type. If the drawing needs a different scale, use the public scale
+constructors or start from a canvas created by \code{as.bbplot()}.
 }
 \examples{
 library(plotbb)

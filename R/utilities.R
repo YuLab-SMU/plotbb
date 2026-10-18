@@ -207,9 +207,9 @@ bb_stat_values <- function(x, y = NULL) {
 ## The grouping variable of a statistical layer.
 ##
 ## One rule for `bb_hist()` and `bb_density()` (and the same precedence other
-## grouped layers use): a discrete `x` groups the numeric variable, otherwise an
-## explicit `group` mapping wins, then `col`, then `fill`. A constant aesthetic
-## is not a mapping and never groups.
+## grouped layers use): an explicit `group` mapping wins, then a discrete `x`,
+## then `col`, then `fill`. A constant aesthetic is not a mapping and never
+## groups.
 bb_stat_group <- function(values, mapping, data) {
     eval_mapping(mapping, "group", data) %||%
         values$group %||%
@@ -334,21 +334,14 @@ bb_summary_labs <- function(plot) {
     }
 
     x_values <- eval_mapping(plot$mapping, "x", plot$data)
-    y_values <- eval_mapping(plot$mapping, "y", plot$data)
     x_discrete <- !is.null(x_values) && !is.numeric(x_values)
-    y_discrete <- !is.null(y_values) && !is.numeric(y_values)
 
     auto_x <- is.null(plot$labs$xlab) || identical(plot$labs$xlab, x_label)
     auto_y <- is.null(plot$labs$ylab) || identical(plot$labs$ylab, y_label)
 
     if (identical(orientation, "horizontal")) {
-        if (y_discrete && !is.null(y_label)) {
-            if (auto_x) plot$labs$xlab <- stat_label
-            if (auto_y) plot$labs$ylab <- y_label
-        } else {
-            if (auto_x) plot$labs$xlab <- stat_label
-            if (auto_y) plot$labs$ylab <- y_label
-        }
+        if (auto_x) plot$labs$xlab <- stat_label
+        if (auto_y) plot$labs$ylab <- y_label
     } else if (x_discrete && !is.null(y_label)) {
         if (auto_x) plot$labs$xlab <- y_label
         if (auto_y) plot$labs$ylab <- stat_label
@@ -360,11 +353,7 @@ bb_summary_labs <- function(plot) {
 
 bb_plot_summarises <- function(plot) {
     any(vapply(plot$adds, function(obj) {
-        inherits(obj, "bb_layer") &&
-            (isTRUE((obj$meta %||% list())$summary) ||
-                 identical(obj$layer, ly_hist) ||
-                 identical(obj$layer, ly_density) ||
-                 identical(obj$layer, ly_violin))
+        inherits(obj, "bb_layer") && bb_layer_is_summary(obj)
     }, logical(1)))
 }
 
@@ -504,7 +493,11 @@ bb_layer_limits <- function(layer_obj, plot) {
 
     if (identical(ly, ly_lm)) {
         formula <- stats::as.formula(paste(yvar(mapping), "~", xvar(mapping)))
-        grp <- eval_mapping(mapping, "group", data)
+        x_values <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
+        grp <- bb_group_values(mapping, data, x_values)
+        if (!is.null(grp) && nrow(data)) {
+            grp <- rep(grp, length.out = nrow(data))
+        }
         se <- layer_obj$params$se %||% TRUE
         level <- layer_obj$params$level %||% 0.95
         if (is.null(grp)) {
@@ -521,7 +514,9 @@ bb_layer_limits <- function(layer_obj, plot) {
         grp_chr <- as.character(grp)
         keep <- !is.na(grp_chr)
         if (!any(keep)) return(current())
-        for (g in unique(grp_chr[keep])) {
+        data <- data[keep, , drop = FALSE]
+        grp_chr <- grp_chr[keep]
+        for (g in unique(grp_chr)) {
             d <- data[grp_chr == g, , drop = FALSE]
             d2 <- lm_data(formula, d, se = se, level = level)
             if (is.null(d2)) next

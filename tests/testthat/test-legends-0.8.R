@@ -150,3 +150,11 @@ test_that("free colour scales work in a facet grid", {
                            logical(1))))
     with_test_pdf(expect_silent(print(p)))
 })
+
+test_that("free colour requires an explicit colour scale", {
+    d <- data.frame(x = 1:4, y = 1:4, f = c("a", "a", "b", "b"),
+                    g = c("u", "v", "u", "v"))
+    p <- bbplot(d, bb_aes(x, y, col = g)) + bb_point() +
+        bb_facet_wrap(~f, free_colour = TRUE)
+    expect_error(with_test_pdf(print(p)), "explicit colour scale")
+})

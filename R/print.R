@@ -365,7 +365,9 @@ bb_facet_layer_data <- function(layer_data, facet, panel, idx, n_plot) {
 bb_facet_wrap <- function(facets, ncol = NULL, nrow = NULL, scales = "fixed",
                           labeller = NULL, drop = TRUE, strip_width = NULL,
                           free_colour = FALSE) {
-    stopifnot(inherits(facets, "formula"))
+    if (!inherits(facets, "formula")) {
+        bb_abort("`facets` in `bb_facet_wrap()` must be a one-sided formula.")
+    }
     scales <- match.arg(scales, c("fixed", "free", "free_x", "free_y"))
     if (!is.null(labeller) && !is.function(labeller)) {
         bb_abort("`labeller` in `bb_facet_wrap()` must be a function or NULL.")
@@ -405,6 +407,11 @@ bb_facet_wrap <- function(facets, ncol = NULL, nrow = NULL, scales = "fixed",
 ## globally trained scale. Only meaningful when an explicit colour scale exists:
 ## the default colour mapping is value-based and identical across panels.
 bb_facet_free_scales <- function(panel, global) {
+    if (is.null(global$col) && is.null(global$fill)) {
+        bb_abort("`free_colour = TRUE` requires an explicit colour scale; ",
+                 "the default colour mapping is shared across panels. Add ",
+                 "`bb_scale_col_*()` or `bb_scale_fill_*()`.")
+    }
     panel <- bb_train_scales(panel)
     panel_scales <- bb_get_scales(panel)
     for (a in setdiff(names(global), c("col", "fill"))) {

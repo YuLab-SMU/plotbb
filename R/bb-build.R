@@ -18,8 +18,9 @@
 ##' @return A list with \code{data}, \code{mapping} (labels), \code{layers}
 ##'   (name, kind, data, mapping labels, inherit, parameter names), \code{scales}
 ##'   (trained), \code{limits}, \code{panels} (\code{NULL} or one entry per
-##'   facet with its key, row count and limits), \code{labs}, \code{facet} (a
-##'   serializable summary: variables, scales, nrow and ncol) and \code{warnings}
+##'   facet with its key, row count and limits), \code{labs}, \code{position}
+##'   (the positional-scale summary), \code{facet} (a serializable summary:
+##'   variables, scales, nrow, ncol and free_colour) and \code{warnings}
 ##'   collected while building.
 ##' @seealso \code{\link{bb_save}}
 ##' @export
@@ -32,6 +33,9 @@ bb_build <- function(plot) {
     }
     plot <- bb_flip_plot(plot)
 
+    ## `bb_warn()` deduplicates per top-level draw. A build is independent of
+    ## the previous one, so clear that state before collecting warnings.
+    bb_reset_warnings()
     warnings <- character()
     built <- withCallingHandlers({
         prepared <- bb_prepare_plot(plot)
@@ -81,11 +85,16 @@ bb_build_facet <- function(facet) {
         vars = all.vars(rlang::f_rhs(facet$facets)),
         scales = facet$scales %||% "fixed",
         nrow = facet$nrow,
-        ncol = facet$ncol
+        ncol = facet$ncol,
+        free_colour = isTRUE(facet$free_colour)
     )
 }
 
 bb_build_panels_grid <- function(plot) {
+    if (is.null(plot$data)) {
+        bb_abort("`bb_facet_grid()` requires plot data; `bb_build()` cannot ",
+                 "report its panels without data.")
+    }
     specs <- bb_grid_specs(plot)
     lapply(specs, function(spec) {
         list(

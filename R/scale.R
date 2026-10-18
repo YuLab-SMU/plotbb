@@ -165,7 +165,11 @@ bb_scale_cex_manual <- function(values, limits = NULL, na.value = 1,
 bb_scale_cex_continuous <- function(range = c(0.8, 1.6), limits = NULL,
                                     na.value = 1,
                                     oob = c("squish", "censor")) {
-    stopifnot(is.numeric(range), length(range) == 2)
+    if (!is.numeric(range) || length(range) != 2L ||
+        any(!is.finite(range))) {
+        bb_abort("`range` in `bb_scale_cex_continuous()` must be two finite ",
+                 "numbers.")
+    }
     bb_symbol_scale("cex", "continuous", range = range, limits = limits,
                     na.value = na.value, oob = match.arg(oob))
 }
@@ -517,6 +521,8 @@ bb_legend <- function(position = "topright", title = NULL, aesthetic = "col",
                       title_width = NULL, width = 1.4, ...) {
     orientation <- match.arg(orientation)
     style <- match.arg(style)
+    aesthetic <- match.arg(aesthetic,
+                           c("col", "fill", "pch", "lty", "cex"))
     if (!is.null(layer) &&
         !(is.numeric(layer) && length(layer) == 1L) &&
         !(is.character(layer) && length(layer) == 1L)) {

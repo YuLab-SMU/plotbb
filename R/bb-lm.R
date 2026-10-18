@@ -23,7 +23,24 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
     se <- params$se %||% TRUE
     level <- params$level %||% 0.95
 
-    if (is.null(mapping$group)) {
+    ## Use the same grouping rule as the other statistical layers: an explicit
+    ## `group` wins, then a mapped `col` or `fill`. A constant colour has
+    ## already been removed from the mapping, so it does not create groups.
+    x_values <- bb_eval_or_fallback(mapping, data, "x", xvar(mapping))
+    grp <- bb_group_values(mapping, data, x_values)
+    if (!is.null(grp) && nrow(data)) {
+        ## A constant group such as `group = 1` is one value for the whole
+        ## layer; recycle it before aligning colours and rows with it.
+        grp <- rep(grp, length.out = nrow(data))
+    }
+    grp_chr <- if (is.null(grp)) NULL else as.character(grp)
+    if (!is.null(grp_chr)) {
+        keep_group <- !is.na(grp_chr)
+        grp_chr <- grp_chr[keep_group]
+        if (!length(grp_chr)) grp_chr <- NULL
+    }
+
+    if (is.null(grp_chr)) {
         d2 <- lm_data(formula, data, se = se, level = level)
         if (is.null(d2)) {
             bb_warn("`bb_lm()` could not fit a linear model to the data; skipped.")
@@ -58,29 +75,35 @@ ly_lm <- function(plot, mapping = NULL, data = NULL, inherit = TRUE, ...) {
         return(plot)
     }
 
-    grp <- eval_mapping(mapping, 'group', data)
-    ugrp <- unique(grp)
+    ## `grp_chr` drops missing group values; a row with no group cannot be
+    ## assigned to a fitted line. `data` is subset by the same filtered vector.
+    data_grouped <- data[!is.na(as.character(grp)), , drop = FALSE]
+    ugrp <- unique(grp_chr)
 
     ly <- function() {
         cols <- NULL
         if (is.null(params$col) && !is.null(mapping$col)) {
             col_vec <- bb_col(mapping, data, plot = plot)
             if (!is.null(col_vec)) {
-                col_map <- tapply(col_vec, as.character(grp), function(z) z[[1]])
-                cols <- unname(col_map[as.character(ugrp)])
+                col_vec <- rep(col_vec, length.out = length(grp))
+                col_vec <- col_vec[!is.na(as.character(grp))]
+                col_map <- tapply(col_vec, grp_chr, function(z) z[[1]])
+                cols <- unname(col_map[ugrp])
             }
         }
         ltypes <- NULL
         if (is.null(params$lty) && !is.null(mapping$lty)) {
             lty_vec <- bb_lty(mapping, data, plot = plot)
             if (!is.null(lty_vec)) {
-                lty_map <- tapply(lty_vec, as.character(grp), function(z) z[[1]])
-                ltypes <- unname(lty_map[as.character(ugrp)])
+                lty_vec <- rep(lty_vec, length.out = length(grp))
+                lty_vec <- lty_vec[!is.na(as.character(grp))]
+                lty_map <- tapply(lty_vec, grp_chr, function(z) z[[1]])
+                ltypes <- unname(lty_map[ugrp])
             }
         }
 
         d2_list <- lapply(ugrp, function(g) {
-            d <- data[grp == g, ]
+            d <- data_grouped[grp_chr == g, , drop = FALSE]
             lm_data(formula, d, se = se, level = level)
         })
         keep <- !vapply(d2_list, is.null, logical(1))

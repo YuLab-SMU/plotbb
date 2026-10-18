@@ -13,8 +13,9 @@ bb_build(plot)
 A list with \code{data}, \code{mapping} (labels), \code{layers}
   (name, kind, data, mapping labels, inherit, parameter names), \code{scales}
   (trained), \code{limits}, \code{panels} (\code{NULL} or one entry per
-  facet with its key, row count and limits), \code{labs}, \code{facet} (a
-  serializable summary: variables, scales, nrow and ncol) and \code{warnings}
+  facet with its key, row count and limits), \code{labs}, \code{position}
+  (the positional-scale summary), \code{facet} (a serializable summary:
+  variables, scales, nrow, ncol and free_colour) and \code{warnings}
   collected while building.
 }
 \description{

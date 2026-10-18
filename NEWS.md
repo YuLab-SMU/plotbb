@@ -4,6 +4,8 @@
 + `bb_coord_flip()` flips density, histogram and smooth layers; a supplied smooth formula is swapped with the mapping
 + horizontal summary labels put `density`/`count` on the x axis
 + tests cover horizontal statistics, flipped formulas and their ranges
++ `bb_lm()` follows the shared grouping rule: an explicit `group`, then a discrete `x`, then `col`, then `fill`
++ `free_colour = TRUE` now fails clearly without an explicit colour scale instead of silently sharing one
 + examples use the native `|>` pipe; `magrittr` is no longer a dependency
 
 # plotbb 0.9.0
