@@ -11,9 +11,10 @@ Description: Implements a grammar of graphics on top of the 'base' graphics
   violins, ribbons, smooths, error bars and tiles, together with colour and
   other aesthetic scales, automatic legends, faceting, themes, coordinate
   flipping and significance annotations.
+Depends:
+  R (>= 4.1.0)
 Imports:
   graphics,
-  magrittr,
   rlang,
   scales,
   methods,

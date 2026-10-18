@@ -4,6 +4,7 @@
 + `bb_coord_flip()` flips density, histogram and smooth layers; a supplied smooth formula is swapped with the mapping
 + horizontal summary labels put `density`/`count` on the x axis
 + tests cover horizontal statistics, flipped formulas and their ranges
++ examples use the native `|>` pipe; `magrittr` is no longer a dependency
 
 # plotbb 0.9.0
 

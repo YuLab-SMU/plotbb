@@ -950,9 +950,3 @@ bb_cex <- function(mapping, data, plot = NULL) {
     else b
 }
 
-##' @importFrom magrittr %>%
-##' @export
-magrittr::`%>%`
-
-
-utils::globalVariables(".")

@@ -183,8 +183,8 @@ plot data and the group means come from a summary that the layer brings itself;
 the axis ranges cover both.
 
 ```{r plotbb-layer-data}
-means <- mtcars %>%
-  group_by(cyl) %>%
+means <- mtcars |>
+  group_by(cyl) |>
   summarise(mpg = mean(mpg), disp = mean(disp), .groups = "drop")
 
 bbplot(mtcars, bb_aes(mpg, disp)) +
@@ -774,8 +774,8 @@ Fitted lines, intervals and errors follow the same pattern: the layer computes
 the summary and contributes both the summary and its uncertainty to the range.
 
 ```{r plotbb-lm-errorbar}
-means <- mtcars %>%
-  group_by(cyl) %>%
+means <- mtcars |>
+  group_by(cyl) |>
   summarise(x = cyl[1], y = mean(disp), sd = sd(disp), .groups = "drop")
 
 a <- bbplot(means, bb_aes(x, y)) +
@@ -1105,8 +1105,8 @@ layers, this is a compact demonstration of deferred drawing. Labels and theme
 come last because they affect the frame rather than the data.
 
 ```{r plotbb-workflow}
-means <- mtcars %>%
-  group_by(cyl) %>%
+means <- mtcars |>
+  group_by(cyl) |>
   summarise(mpg = mean(mpg), disp = mean(disp), .groups = "drop")
 
 bbplot(mtcars, bb_aes(mpg, disp, col = factor(cyl))) +

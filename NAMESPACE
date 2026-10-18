@@ -19,7 +19,6 @@ S3method(bbplot_add,expression)
 S3method(bbplot_add,formula)
 S3method(print,bbplot)
 S3method(print,bbplot_layer_list)
-export("%>%")
 export(as.bbplot)
 export(bb_aes)
 export(bb_bar)
@@ -95,7 +94,6 @@ importFrom(graphics,
   text,
   title
 )
-importFrom(magrittr,"%>%")
 importFrom(methods,is)
 importFrom(rlang,
   enquos,
