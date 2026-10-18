@@ -16,8 +16,6 @@
 + multiple outside legends stack by their drawn height; `bb_legend(width = )` sets the legend column width
 + tests cover horizontal layers and their coord-flip forms
 
-(2026-10-18, Sun)
-
 # plotbb 0.8.5
 
 + positional scales for continuous, log10 and Date x/y axes, with limits, breaks and labels; limits are final and clip values outside them
@@ -37,8 +35,6 @@
 + long grid row labels are drawn horizontally with a dynamic right margin
 + the per-layer legend example and known limits are corrected
 
-(2026-10-17, Sat)
-
 # plotbb 0.8.0
 
 + `bb_legend(layer = )` describes one layer's mapping; `style = "bar"` draws adjacent colour blocks and `title_width` wraps long titles
@@ -46,8 +42,6 @@
 + `bb_build()` reports per-panel `col_domain`/`fill_domain` and the facet records `free_colour`
 + colour bars gain `minor_breaks`
 + tests and the vignette cover per-layer legends, free colour facets and minor breaks
-
-(2026-10-17, Sat)
 
 # plotbb 0.7.0
 
@@ -57,8 +51,6 @@
 + smooth groups come from `group`, `col` or `fill`; each group gets its own curve and confidence band
 + tests and the vignette cover both statistical layers
 
-(2026-10-17, Sat)
-
 # plotbb 0.6.0
 
 + `bb_facet_wrap()` gains `labeller`, `drop` and `strip_width`
@@ -66,8 +58,6 @@
 + facet free scales follow the grid layout; `fixed` uses the global limits
 + `bb_build()` reports grid panels with row/column keys, labels and limits
 + tests and the vignette cover empty levels, labellers, grid layouts and outside legends
-
-(2026-10-17, Sat)
 
 # plotbb 0.5.0
 
@@ -78,8 +68,6 @@
 + `bbplot_add()` is documented as the public component contract
 + new build/save and extension tests, plus the "Extending from a package" vignette section
 
-(2026-10-17, Sat)
-
 # plotbb 0.4.0
 
 + `bb_ribbon()` draws a band between `ymin` and `ymax` along `x`, one polygon per group, with `alpha`, `border` and mapped `fill`/`col`
@@ -87,8 +75,6 @@
 + layer data that cannot supply an inherited mapping contributes no range instead of failing
 + `bb_facet_wrap()` validates the layout size against the number of panels
 + new layer and facet tests plus the "Bands and reference lines" vignette section
-
-(2026-10-17, Sat)
 
 # plotbb 0.3.0
 
@@ -101,8 +87,6 @@
 + histograms and densities compute their summary coordinates on the correct axis
 + new scale tests and a rewritten scale/legend vignette section
 
-(2026-10-17, Sat)
-
 # plotbb 0.2.5
 
 + every layer accepts `inherit`; a local mapping overrides the global mapping aesthetic by aesthetic
@@ -113,8 +97,6 @@
 + `bb_layer()` is the supported custom-layer entry point with inheritance, constants, ranges and facets
 + the vignette was rewritten around the grammar, with a contract recap and an error-message guide
 
-(2026-10-17, Sat)
-
 # plotbb 0.2.0
 
 + `print.bbplot()` snapshots and restores `par()` on normal return and on error; themes and facets restore their layout state
@@ -124,8 +106,6 @@
 + `bb_point(position = "jitter")` gains a reproducible `seed` and does not disturb `.Random.seed`
 + layer arguments are passed by name; layers no longer rely on `par(new = TRUE)`
 + new state and input tests
-
-(2026-10-17, Sat)
 
 # plotbb 0.1.2
 
